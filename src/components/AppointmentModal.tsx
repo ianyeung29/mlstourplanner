@@ -1,0 +1,195 @@
+'use client';
+
+import React from 'react';
+import { Tour, TourStop, AppointmentStatus } from '@/types/tour';
+import { getUserProfile } from '@/services/storage';
+import {
+  extractTemplateVariables,
+  DEFAULT_EMAIL_TEMPLATE,
+  DEFAULT_SMS_TEMPLATE,
+  renderTemplate
+} from '@/services/template';
+import { X, Copy, Check, Mail, MessageSquare, CheckCircle2, AlertCircle, XCircle, Clock } from 'lucide-react';
+
+interface AppointmentModalProps {
+  tour: Tour;
+  stop: TourStop | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdateStatus: (stopId: string, status: AppointmentStatus, confirmedTime?: string) => void;
+}
+
+export default function AppointmentModal({
+  tour,
+  stop,
+  isOpen,
+  onClose,
+  onUpdateStatus
+}: AppointmentModalProps) {
+  const [channel, setChannel] = React.useState<'SMS' | 'EMAIL'>('SMS');
+  const [copied, setCopied] = React.useState(false);
+  const [draftText, setDraftText] = React.useState('');
+  const [confirmedTimeInput, setConfirmedTimeInput] = React.useState('');
+
+  const user = getUserProfile();
+
+  React.useEffect(() => {
+    if (stop) {
+      const vars = extractTemplateVariables(tour, stop, user);
+      const template = channel === 'SMS' ? DEFAULT_SMS_TEMPLATE : DEFAULT_EMAIL_TEMPLATE;
+      setDraftText(renderTemplate(template, vars));
+      setConfirmedTimeInput(stop.confirmed_start || stop.proposed_start || '10:00 AM');
+    }
+  }, [stop, tour, channel]);
+
+  if (!isOpen || !stop) return null;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(draftText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-indigo-400" />
+              Showing Request & Status
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5 max-w-md truncate">
+              {stop.normalized_address}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+          {/* Channel Tabs */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setChannel('SMS')}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                channel === 'SMS'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>SMS Request Draft</span>
+            </button>
+            <button
+              onClick={() => setChannel('EMAIL')}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                channel === 'EMAIL'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              <span>Email Request Draft</span>
+            </button>
+          </div>
+
+          {/* Draft Message Editor */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span className="font-semibold text-slate-300">Ready-to-Copy Draft Message</span>
+              <span>{draftText.length} characters</span>
+            </div>
+            <div className="relative">
+              <textarea
+                rows={6}
+                value={draftText}
+                onChange={(e) => setDraftText(e.target.value)}
+                className="w-full bg-slate-950 text-slate-200 text-sm font-sans p-4 rounded-2xl border border-slate-800 focus:outline-none focus:border-indigo-500 transition-colors leading-relaxed resize-none"
+              />
+              <button
+                onClick={handleCopy}
+                className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg transition-transform active:scale-95"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? 'Copied!' : 'Copy to Clipboard'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Update Appointment Status Actions */}
+          <div className="pt-4 border-t border-slate-800 space-y-3">
+            <label className="text-xs font-semibold text-slate-300 block uppercase tracking-wider">
+              Record Listing Agent Response
+            </label>
+
+            {/* Confirmed time input */}
+            <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+              <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-xs font-medium text-slate-300">Confirmed Start Time:</span>
+              <input
+                type="text"
+                value={confirmedTimeInput}
+                onChange={(e) => setConfirmedTimeInput(e.target.value)}
+                placeholder="e.g. 10:30 AM"
+                className="bg-slate-900 border border-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl focus:outline-none focus:border-emerald-500 w-32"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                onClick={() => {
+                  onUpdateStatus(stop.id, 'CONFIRMED', confirmedTimeInput);
+                  onClose();
+                }}
+                className="px-3 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Confirm Time</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onUpdateStatus(stop.id, 'REQUESTED');
+                  onClose();
+                }}
+                className="px-3 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Clock className="w-4 h-4 text-blue-400" />
+                <span>Mark Requested</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onUpdateStatus(stop.id, 'ALTERNATE_PROPOSED');
+                  onClose();
+                }}
+                className="px-3 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+              >
+                <AlertCircle className="w-4 h-4 text-amber-400" />
+                <span>Alt Offered</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onUpdateStatus(stop.id, 'DECLINED');
+                  onClose();
+                }}
+                className="px-3 py-2.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+              >
+                <XCircle className="w-4 h-4 text-rose-400" />
+                <span>Declined</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

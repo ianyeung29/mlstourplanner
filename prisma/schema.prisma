@@ -1,0 +1,126 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model DeviceSession {
+  id               String   @id @default(cuid())
+  machine_id       String   @unique
+  ip_address       String?
+  trial_tours_used Int      @default(0)
+  is_blocked       Boolean  @default(false)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
+
+model User {
+  id                    String          @id @default(cuid())
+  full_name             String
+  email                 String          @unique
+  password_hash         String?
+  google_id             String?
+  phone                 String?
+  brokerage_name        String?
+  license_number        String?
+  default_start_address String?
+  default_visit_minutes Int             @default(25)
+  default_access_minutes Int            @default(5)
+  default_travel_buffer Int             @default(5)
+  timezone              String          @default("America/New_York")
+  subscription_tier     String          @default("FREE_TRIAL")
+  is_verified           Boolean         @default(false)
+  verification_token    String?         @unique
+  created_at            DateTime        @default(now())
+  updated_at            DateTime        @updatedAt
+
+  tours                 Tour[]
+  contacts              ClientContact[]
+}
+
+model ClientContact {
+  id                       String   @id @default(cuid())
+  user_id                  String?
+  name                     String
+  email                    String
+  phone                    String?
+  notes                    String?
+  preferred_contact_method String?  @default("EMAIL")
+  preferred_contact_time   String?  @default("ANYTIME")
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  user                     User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Tour {
+  id                    String     @id @default(cuid())
+  user_id               String?
+  name                  String
+  client_display_name   String?
+  client_email          String?
+  status                String     @default("DRAFT")
+  tour_date             String
+  timezone              String     @default("America/New_York")
+  earliest_start        String     @default("09:30")
+  latest_finish         String     @default("16:00")
+  start_address         String
+  start_latitude        Float      @default(40.7865)
+  start_longitude       Float      @default(-73.7285)
+  default_visit_minutes Int        @default(25)
+  default_access_minutes Int       @default(5)
+  default_travel_buffer Int        @default(5)
+  notes                 String?
+  
+  // Creator Agent Metadata (tied permanently to tour)
+  agent_name            String?    @default("Ian Yeung")
+  agent_email           String?    @default("ianyeung30@gmail.com")
+  agent_phone           String?    @default("(516) 555-8820")
+  agent_brokerage       String?    @default("Side Luxury Real Estate")
+
+  created_at            DateTime   @default(now())
+  updated_at            DateTime   @updatedAt
+
+  user                  User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  stops                 TourStop[]
+}
+
+model TourStop {
+  id                    String   @id @default(cuid())
+  tour_id               String
+  original_input        String
+  normalized_address    String
+  latitude              Float
+  longitude             Float
+  mls_number            String?
+  list_price            Int?
+  beds                  Int?
+  baths                 Float?
+  sqft                  Int?
+  image_url             String?
+  has_open_house        Boolean  @default(false)
+  open_house_start      String?
+  open_house_end        String?
+  listing_agent_name    String?
+  listing_agent_phone   String?
+  listing_agent_email   String?
+  listing_brokerage     String?
+  priority              String   @default("PREFERRED")
+  appointment_status    String   @default("NOT_REQUESTED")
+  scheduling_mode       String   @default("FLEXIBLE")
+  visit_minutes         Int      @default(25)
+  access_before_minutes Int      @default(5)
+  travel_buffer_minutes Int      @default(5)
+  planned_arrival       String?
+  planned_departure     String?
+  planned_order         Int?
+  agent_notes           String?
+  client_notes          String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  tour                  Tour     @relation(fields: [tour_id], references: [id], onDelete: Cascade)
+}
