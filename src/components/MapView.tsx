@@ -4,15 +4,14 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Tour, TourStop } from '@/types/tour';
 import StatusBadge from './StatusBadge';
-import { Navigation, ExternalLink, Trash2, MapPin, Layers, Map as MapIcon, Home, Bed, Bath, Maximize2, Clock } from 'lucide-react';
+import { Navigation, ExternalLink, Trash2, MapPin, Layers, Map as MapIcon } from 'lucide-react';
 
-// Dynamically import Leaflet InteractiveMap without SSR
-const InteractiveMap = dynamic(() => import('./InteractiveMap'), {
+const GoogleInteractiveMap = dynamic(() => import('./GoogleInteractiveMap'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full min-h-[350px] bg-slate-950 flex items-center justify-center text-indigo-400 font-bold text-xs gap-2">
       <div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
-      <span>Loading Interactive Pin Map...</span>
+      <span>Loading Google Maps Interactive Engine...</span>
     </div>
   )
 });
@@ -34,7 +33,7 @@ export default function MapView({
   onHoverStop,
   onRemoveStop
 }: MapViewProps) {
-  const [mapMode, setMapMode] = useState<'INTERACTIVE_PINS' | 'GOOGLE_DIRECTIONS'>('INTERACTIVE_PINS');
+  const [mapMode, setMapMode] = useState<'GOOGLE_INTERACTIVE' | 'GOOGLE_DIRECTIONS'>('GOOGLE_INTERACTIVE');
   const stops = tour.stops;
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
 
@@ -65,7 +64,7 @@ export default function MapView({
           <Navigation className="w-4 h-4 text-indigo-400" />
           <div>
             <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-              <span>Interactive Property Tour Map</span>
+              <span>Google Maps Route Navigation</span>
               <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[9px]">Live Hover Sync</span>
             </h4>
             <p className="text-[10px] text-slate-400">{stops.length} Property Showing Stops · Long Island</p>
@@ -76,13 +75,13 @@ export default function MapView({
           {/* Toggle Map Mode */}
           <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] font-bold">
             <button
-              onClick={() => setMapMode('INTERACTIVE_PINS')}
+              onClick={() => setMapMode('GOOGLE_INTERACTIVE')}
               className={`px-2 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer ${
-                mapMode === 'INTERACTIVE_PINS' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                mapMode === 'GOOGLE_INTERACTIVE' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
               <MapIcon className="w-3 h-3" />
-              <span>Interactive Pins</span>
+              <span>Google Interactive Map</span>
             </button>
             <button
               onClick={() => setMapMode('GOOGLE_DIRECTIONS')}
@@ -112,7 +111,7 @@ export default function MapView({
       {/* Map Pins Selector Bar */}
       <div className="px-3 py-2 bg-slate-900/80 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto z-10">
         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-          <MapPin className="w-3 h-3 text-indigo-400" /> Tour Stops:
+          <MapPin className="w-3 h-3 text-indigo-400" /> Tour Pins:
         </span>
         {stops.map((stop, idx) => {
           const isSelected = stop.id === selectedStopId;
@@ -140,8 +139,8 @@ export default function MapView({
 
       {/* Main Map Body */}
       <div className="relative flex-1 w-full h-full min-h-[350px] bg-slate-950">
-        {mapMode === 'INTERACTIVE_PINS' ? (
-          <InteractiveMap
+        {mapMode === 'GOOGLE_INTERACTIVE' ? (
+          <GoogleInteractiveMap
             stops={stops}
             selectedStopId={selectedStopId}
             hoveredStopId={hoveredStopId}
