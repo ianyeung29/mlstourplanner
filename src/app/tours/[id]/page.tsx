@@ -43,6 +43,7 @@ export default function TourWorkspacePage() {
 
   const [tour, setTour] = React.useState<Tour | null>(null);
   const [selectedStopId, setSelectedStopId] = React.useState<string | undefined>(undefined);
+  const [hoveredStopId, setHoveredStopId] = React.useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = React.useState<'TIMELINE' | 'MAP'>('TIMELINE');
   const [warnings, setWarnings] = React.useState<string[]>([]);
   const [infeasibleReasons, setInfeasibleReasons] = React.useState<string[]>([]);
@@ -613,7 +614,9 @@ export default function TourWorkspacePage() {
           <TimelineView
             tour={tour}
             selectedStopId={selectedStopId}
+            hoveredStopId={hoveredStopId}
             onSelectStop={setSelectedStopId}
+            onHoverStop={setHoveredStopId}
             onToggleLock={handleToggleLock}
             onMoveStop={handleMoveStop}
             onOpenMessageModal={(stop) => {
@@ -637,7 +640,9 @@ export default function TourWorkspacePage() {
           <MapView
             tour={tour}
             selectedStopId={selectedStopId}
+            hoveredStopId={hoveredStopId}
             onSelectStop={setSelectedStopId}
+            onHoverStop={setHoveredStopId}
             onRemoveStop={handleRemoveStop}
           />
         </div>

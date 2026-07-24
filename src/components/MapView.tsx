@@ -3,16 +3,25 @@
 import React from 'react';
 import { Tour, TourStop } from '@/types/tour';
 import StatusBadge from './StatusBadge';
-import { MapPin, Navigation, Home, CheckCircle2, Clock, Trash2, ExternalLink, Layers } from 'lucide-react';
+import { Navigation, ExternalLink, Trash2, MapPin, Home, Bed, Bath, Maximize2, DollarSign, Clock, Sparkles } from 'lucide-react';
 
 interface MapViewProps {
   tour: Tour;
   selectedStopId?: string;
+  hoveredStopId?: string;
   onSelectStop?: (stopId: string) => void;
+  onHoverStop?: (stopId?: string) => void;
   onRemoveStop?: (stopId: string) => void;
 }
 
-export default function MapView({ tour, selectedStopId, onSelectStop, onRemoveStop }: MapViewProps) {
+export default function MapView({
+  tour,
+  selectedStopId,
+  hoveredStopId,
+  onSelectStop,
+  onHoverStop,
+  onRemoveStop
+}: MapViewProps) {
   const stops = tour.stops;
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
 
@@ -30,7 +39,14 @@ export default function MapView({ tour, selectedStopId, onSelectStop, onRemoveSt
   // Direct Google Maps Directions link for one-click navigation
   const externalDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=driving`;
 
-  const activeStop = stops.find(s => s.id === selectedStopId);
+  // Active or Hovered Stop for Map Pinpoint Popup
+  const activePinStop = stops.find(s => s.id === (hoveredStopId || selectedStopId)) || (stops.length > 0 ? stops[0] : null);
+  const isHoverActive = Boolean(hoveredStopId && stops.some(s => s.id === hoveredStopId));
+
+  const formatPrice = (price?: number) => {
+    if (!price) return null;
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(price);
+  };
 
   return (
     <div className="relative w-full h-full min-h-[450px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
@@ -60,7 +76,36 @@ export default function MapView({ tour, selectedStopId, onSelectStop, onRemoveSt
         )}
       </div>
 
-      {/* Real Google Maps Embed / Interactive Iframe */}
+      {/* Interactive Map Pinpoints Quick Selector Strip */}
+      <div className="px-3 py-2 bg-slate-900/80 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto z-10">
+        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+          <MapPin className="w-3 h-3 text-indigo-400" /> Map Pins:
+        </span>
+        {stops.map((stop, idx) => {
+          const isSelected = stop.id === selectedStopId;
+          const isHovered = stop.id === hoveredStopId;
+          return (
+            <button
+              key={stop.id}
+              onClick={() => onSelectStop?.(stop.id)}
+              onMouseEnter={() => onHoverStop?.(stop.id)}
+              onMouseLeave={() => onHoverStop?.(undefined)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer border ${
+                isHovered
+                  ? 'bg-indigo-500 text-white border-indigo-400 ring-2 ring-indigo-400/50 shadow-lg scale-105'
+                  : isSelected
+                    ? 'bg-indigo-600 text-white border-indigo-500 ring-1 ring-indigo-500/50'
+                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <span>#{idx + 1}</span>
+              <span className="max-w-[90px] truncate text-[11px] font-normal">{stop.normalized_address.split(',')[0]}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Real Google Maps Embed / Interactive Iframe with Floating Pinpoint Popup Overlay */}
       <div className="relative flex-1 w-full h-full min-h-[350px] bg-slate-950">
         {stops.length > 0 ? (
           <iframe
@@ -78,24 +123,90 @@ export default function MapView({ tour, selectedStopId, onSelectStop, onRemoveSt
             No property listings in tour itinerary yet.
           </div>
         )}
+
+        {/* Floating Map Pinpoint Info Popup (Triggered on Hover or Selection) */}
+        {activePinStop && (
+          <div className={`absolute top-4 left-4 right-4 pointer-events-auto transition-all duration-300 transform z-20 ${
+            isHoverActive ? 'scale-100 opacity-100' : 'scale-98 opacity-95'
+          }`}>
+            <div className="p-3.5 bg-slate-900/95 backdrop-blur-xl border border-indigo-500/50 rounded-2xl shadow-2xl ring-1 ring-indigo-500/30 flex items-start gap-3.5">
+              {/* Photo Thumbnail */}
+              <div className="relative w-24 h-20 rounded-xl overflow-hidden bg-slate-950 shrink-0 border border-slate-700/80 shadow-md">
+                {activePinStop.image_url ? (
+                  <img
+                    src={activePinStop.image_url}
+                    alt={activePinStop.normalized_address}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-600">
+                    <Home className="w-6 h-6" />
+                  </div>
+                )}
+                {/* Stop Order Badge overlay */}
+                <div className="absolute top-1 left-1 px-2 py-0.5 rounded-md bg-indigo-600/90 backdrop-blur text-white text-[10px] font-black shadow">
+                  #{activePinStop.planned_order}
+                </div>
+              </div>
+
+              {/* Details & Specs */}
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="text-xs font-black text-white leading-tight truncate">
+                    {activePinStop.normalized_address}
+                  </h4>
+                  {formatPrice(activePinStop.list_price) && (
+                    <span className="text-xs font-black text-emerald-400 shrink-0 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
+                      {formatPrice(activePinStop.list_price)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Specs: Beds, Baths, Sqft */}
+                <div className="flex items-center gap-3 text-[11px] font-medium text-slate-300">
+                  {typeof activePinStop.beds === 'number' && (
+                    <span className="flex items-center gap-1">
+                      <Bed className="w-3 h-3 text-indigo-400" /> {activePinStop.beds} Beds
+                    </span>
+                  )}
+                  {typeof activePinStop.baths === 'number' && (
+                    <span className="flex items-center gap-1">
+                      <Bath className="w-3 h-3 text-indigo-400" /> {activePinStop.baths} Baths
+                    </span>
+                  )}
+                  {activePinStop.sqft && (
+                    <span className="flex items-center gap-1 text-slate-400">
+                      <Maximize2 className="w-3 h-3 text-slate-500" /> {activePinStop.sqft.toLocaleString()} sqft
+                    </span>
+                  )}
+                </div>
+
+                {/* Scheduled Time & Status */}
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
+                  <span className="flex items-center gap-1 font-bold text-indigo-300">
+                    <Clock className="w-3 h-3 text-indigo-400" /> {activePinStop.planned_arrival} – {activePinStop.planned_departure}
+                  </span>
+                  <StatusBadge status={activePinStop.appointment_status} size="sm" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Selected Stop Quick Detail Bar at Bottom */}
-      {activeStop && (
-        <div className="p-3.5 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex items-center justify-between z-20">
+      {/* Selected Stop Action Bar */}
+      {activePinStop && (
+        <div className="p-3 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex items-center justify-between z-10">
           <div className="flex items-center space-x-3 min-w-0 flex-1">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center font-bold text-indigo-300 text-xs shrink-0">
-              #{activeStop.planned_order}
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center font-bold text-indigo-300 text-xs shrink-0">
+              #{activePinStop.planned_order}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-white flex items-center gap-2 truncate">
-                <span className="truncate">{activeStop.normalized_address}</span>
-                <StatusBadge status={activeStop.appointment_status} size="sm" />
+              <div className="text-xs font-bold text-white truncate">
+                {activePinStop.normalized_address}
               </div>
-              <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-3 mt-0.5">
-                <span>Arrival: <strong className="text-indigo-300">{activeStop.planned_arrival}</strong></span>
-                <span>Visit: <strong>{activeStop.visit_minutes}m</strong></span>
-                {activeStop.mls_number && <span className="text-slate-500 font-mono">MLS: {activeStop.mls_number}</span>}
+              <div className="text-[10px] text-slate-400">
+                Arrival: <strong className="text-indigo-300">{activePinStop.planned_arrival}</strong> · Visit: {activePinStop.visit_minutes}m
               </div>
             </div>
           </div>
@@ -103,8 +214,8 @@ export default function MapView({ tour, selectedStopId, onSelectStop, onRemoveSt
           {onRemoveStop && (
             <button
               onClick={() => {
-                if (confirm(`Remove property "${activeStop.normalized_address}" from itinerary?`)) {
-                  onRemoveStop(activeStop.id);
+                if (confirm(`Remove property "${activePinStop.normalized_address}" from itinerary?`)) {
+                  onRemoveStop(activePinStop.id);
                 }
               }}
               className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-rose-600 text-rose-300 hover:text-white border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 ml-2"

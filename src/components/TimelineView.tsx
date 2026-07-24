@@ -31,7 +31,9 @@ import {
 interface TimelineViewProps {
   tour: Tour;
   selectedStopId?: string;
+  hoveredStopId?: string;
   onSelectStop: (stopId: string) => void;
+  onHoverStop?: (stopId?: string) => void;
   onToggleLock: (stopId: string) => void;
   onMoveStop: (index: number, direction: 'up' | 'down') => void;
   onOpenMessageModal: (stop: TourStop) => void;
@@ -60,7 +62,9 @@ function parseTimeToMins(timeStr?: string): number {
 export default function TimelineView({
   tour,
   selectedStopId,
+  hoveredStopId,
   onSelectStop,
+  onHoverStop,
   onToggleLock,
   onMoveStop,
   onOpenMessageModal,
@@ -89,6 +93,7 @@ export default function TimelineView({
 
   const renderStopCard = (stop: TourStop, idx: number, isOutside: boolean) => {
     const isSelected = stop.id === selectedStopId;
+    const isHovered = stop.id === hoveredStopId;
     const isLocked = stop.scheduling_mode === 'TIME_LOCKED' || stop.appointment_status === 'CONFIRMED';
     const hasOpenHouse = stop.has_open_house;
 
@@ -125,12 +130,16 @@ export default function TimelineView({
 
         <div
           onClick={() => onSelectStop(stop.id)}
+          onMouseEnter={() => onHoverStop?.(stop.id)}
+          onMouseLeave={() => onHoverStop?.(undefined)}
           className={`group relative p-3 rounded-xl border transition-all cursor-pointer space-y-2 ${
-            isOutside
-              ? 'bg-rose-950/30 border-rose-500/70 hover:border-rose-400'
-              : isSelected
-                ? 'bg-slate-900 border-indigo-500 ring-1 ring-indigo-500/50 shadow-lg'
-                : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+            isHovered
+              ? 'bg-slate-900 border-indigo-400 ring-2 ring-indigo-400/80 shadow-2xl scale-[1.01]'
+              : isOutside
+                ? 'bg-rose-950/30 border-rose-500/70 hover:border-rose-400'
+                : isSelected
+                  ? 'bg-slate-900 border-indigo-500 ring-1 ring-indigo-500/50 shadow-lg'
+                  : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
           }`}
         >
           <div className="flex items-start justify-between gap-3">
