@@ -42,45 +42,26 @@ function calculateRouteDistance(sequence: any[]): number {
 }
 
 export async function POST(request: Request) {
-  const debugLog: any = {
-    apiKeyConfigured: false,
-    stopsCount: 0,
-    apiStatus: null,
-    provider: 'UNKNOWN',
-    candidatesEvaluated: 0,
-    googleResponses: [],
-    minTotalDurationSeconds: null,
-    minDistanceMeters: null,
-    originalSequence: [],
-    reorderedSequence: []
-  };
-
   try {
     const { stops } = await request.json();
-    debugLog.stopsCount = stops?.length || 0;
-    debugLog.originalSequence = stops?.map((s: any) => s.normalized_address) || [];
 
     if (!stops || stops.length <= 1) {
-      debugLog.reorderedSequence = debugLog.originalSequence;
-      return NextResponse.json({ status: 'SUCCESS', stops, debug: debugLog });
+      return NextResponse.json({ status: 'SUCCESS', stops });
     }
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
     const isGoogleKeyConfigured = !!(apiKey && apiKey.startsWith('AIza') && !apiKey.includes('your_google_maps_key'));
-    debugLog.apiKeyConfigured = isGoogleKeyConfigured;
 
     let bestGlobalSequence: any[] = [...stops];
 
     if (isGoogleKeyConfigured && stops.length >= 2) {
       let minTotalDurationSeconds = Infinity;
-      debugLog.provider = 'GOOGLE_DIRECTIONS_API_OPEN_PATH';
 
       // Evaluate candidate start & end pairs for open-path TSP optimization
       for (let startIdx = 0; startIdx < stops.length; startIdx++) {
         for (let endIdx = 0; endIdx < stops.length; endIdx++) {
           if (startIdx === endIdx && stops.length > 1) continue;
 
-          debugLog.candidatesEvaluated++;
           const startStop = stops[startIdx];
           const endStop = stops[endIdx];
           const intermediates = stops.filter((_: any, i: number) => i !== startIdx && i !== endIdx);
@@ -95,7 +76,6 @@ export async function POST(request: Request) {
           try {
             const googleRes = await fetch(url);
             const data = await googleRes.json();
-            debugLog.apiStatus = googleRes.status;
 
             if (data.status === 'OK' && data.routes?.[0]) {
               const route = data.routes[0];
@@ -108,38 +88,44 @@ export async function POST(request: Request) {
                 });
               }
 
-              debugLog.googleResponses.push({
-                start: startStop.normalized_address,
-                end: endStop.normalized_address,
-                durationSecs,
-                waypointOrder
-              });
-
               if (durationSecs < minTotalDurationSeconds && waypointOrder.length === intermediates.length) {
                 minTotalDurationSeconds = durationSecs;
-                debugLog.minTotalDurationSeconds = durationSecs;
                 const reorderedIntermediates = waypointOrder.map(idx => intermediates[idx]);
-                bestGlobalSequence = [startStop, ...reorderedIntermediates, endStop];
+                const candidateSeq = [startStop, ...reorderedIntermediates, endStop];
+
+                // Attach exact Google Directions leg drive times & distances
+                if (route.legs && route.legs.length === candidateSeq.length - 1) {
+                  candidateSeq[0].drive_minutes_from_prev = 0;
+                  candidateSeq[0].drive_miles_from_prev = 0;
+
+                  for (let lIdx = 0; lIdx < route.legs.length; lIdx++) {
+                    const leg = route.legs[lIdx];
+                    const legMins = Math.max(1, Math.round((leg.duration?.value || 0) / 60));
+                    const legMiles = Math.round(((leg.distance?.value || 0) / 1609.34) * 10) / 10;
+
+                    candidateSeq[lIdx + 1].drive_minutes_from_prev = legMins;
+                    candidateSeq[lIdx + 1].drive_miles_from_prev = legMiles;
+                  }
+                }
+
+                bestGlobalSequence = candidateSeq;
               }
             }
           } catch (e: any) {
-            debugLog.googleResponses.push({ error: e.message });
+            // Fallback
           }
         }
       }
     } else {
-      // Fallback open-path permutation solver using precise Haversine distance
-      debugLog.provider = 'HAVERSINE_PERMUTATION_SOLVER (Google Maps Key Not Set in .env.local)';
+      // Fallback open-path permutation solver using Haversine distance
       if (stops.length <= 8) {
         const allPermutations = getPermutations(stops);
         let minDistance = Infinity;
 
         for (const candidate of allPermutations) {
-          debugLog.candidatesEvaluated++;
           const dist = calculateRouteDistance(candidate);
           if (dist < minDistance) {
             minDistance = dist;
-            debugLog.minDistanceMeters = dist;
             bestGlobalSequence = candidate;
           }
         }
@@ -148,18 +134,22 @@ export async function POST(request: Request) {
 
     bestGlobalSequence.forEach((s: any, idx: number) => {
       s.planned_order = idx + 1;
+      if (idx === 0) {
+        s.drive_minutes_from_prev = 0;
+        s.drive_miles_from_prev = 0;
+      } else if (!s.drive_minutes_from_prev || s.drive_minutes_from_prev === 0) {
+        const prev = bestGlobalSequence[idx - 1];
+        const distMeters = calculateHaversineDistanceMeters(prev.latitude, prev.longitude, s.latitude, s.longitude);
+        s.drive_miles_from_prev = Math.round((distMeters / 1609.34) * 10) / 10;
+        s.drive_minutes_from_prev = Math.max(2, Math.ceil(distMeters / 670));
+      }
     });
-
-    debugLog.reorderedSequence = bestGlobalSequence.map((s: any) => s.normalized_address);
 
     return NextResponse.json({
       status: 'SUCCESS',
-      provider: debugLog.provider,
-      stops: bestGlobalSequence,
-      debug: debugLog
+      stops: bestGlobalSequence
     });
   } catch (error: any) {
-    debugLog.error = error.message;
-    return NextResponse.json({ error: error.message || 'Route optimization error', debug: debugLog }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Route optimization error' }, { status: 500 });
   }
 }

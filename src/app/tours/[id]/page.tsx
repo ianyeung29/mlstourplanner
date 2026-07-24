@@ -7,6 +7,7 @@ import { Tour, TourStop, AppointmentStatus } from '@/types/tour';
 import { getTourById, saveTour, deleteTour } from '@/services/storage';
 import { optimizeTourSchedule, reorderStopsForShortestRoute, reorderStopsWithGoogle } from '@/services/routeOptimizer';
 import { lookupByMlsNumber } from '@/services/mlsService';
+import { geocodeAddress } from '@/services/geocode';
 import TimelineView from '@/components/TimelineView';
 import MapView from '@/components/MapView';
 import StatusBadge from '@/components/StatusBadge';
@@ -214,13 +215,16 @@ export default function TourWorkspacePage() {
   };
 
   const handleAddExtractedStop = async (extracted: Partial<TourStop>) => {
+    const targetAddr = extracted.normalized_address || extracted.original_input || '78 Shelter Rock Rd, Manhasset, NY 11030';
+    const geocoded = await geocodeAddress(targetAddr);
+
     const newStop: TourStop = {
-      id: `stop_ai_${Date.now()}`,
+      id: `stop_ai_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       tour_id: tour.id,
-      original_input: extracted.normalized_address || 'AI Scan Document',
-      normalized_address: extracted.normalized_address || '78 Shelter Rock Rd, Manhasset, NY 11030',
-      latitude: extracted.latitude || 40.7912,
-      longitude: extracted.longitude || -73.6954,
+      original_input: targetAddr,
+      normalized_address: geocoded.normalized_address || targetAddr,
+      latitude: geocoded.latitude,
+      longitude: geocoded.longitude,
       geocode_status: 'RESOLVED',
       mls_number: extracted.mls_number || `ONEKEY-${Math.floor(1000000 + Math.random() * 9000000)}`,
       list_price: extracted.list_price || 2150000,
