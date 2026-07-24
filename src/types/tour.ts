@@ -73,6 +73,9 @@ export interface TourStop {
   planned_departure?: string;
   planned_order?: number;
 
+  drive_minutes_from_prev?: number;
+  drive_miles_from_prev?: number;
+
   agent_notes?: string;
   client_notes?: string;
 

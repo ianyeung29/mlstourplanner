@@ -25,6 +25,141 @@ function minutesToFormattedTime(totalMinutes: number): string {
   return `${hours}:${minStr} ${ampm}`;
 }
 
+// Helper to generate all permutations of an array
+function getPermutations<T>(arr: T[]): T[][] {
+  if (arr.length <= 1) return [arr];
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i++) {
+    const current = arr[i];
+    const remaining = arr.slice(0, i).concat(arr.slice(i + 1));
+    const remainingPerms = getPermutations(remaining);
+    for (const perm of remainingPerms) {
+      result.push([current, ...perm]);
+    }
+  }
+  return result;
+}
+
+function calculateInterStopDistance(stops: TourStop[]): number {
+  if (stops.length <= 1) return 0;
+  let totalDist = 0;
+  for (let i = 0; i < stops.length - 1; i++) {
+    totalDist += calculateHaversineDistanceMeters(
+      stops[i].latitude,
+      stops[i].longitude,
+      stops[i + 1].latitude,
+      stops[i + 1].longitude
+    );
+  }
+  return totalDist;
+}
+
+/**
+ * Re-orders stops using Google Directions API to find the global optimal route across ALL stops.
+ * Returns updated tour and rich debug logs.
+ */
+export async function reorderStopsWithGoogle(tour: Tour): Promise<{ tour: Tour; debug?: any }> {
+  if (!tour.stops || tour.stops.length <= 1) return { tour };
+  try {
+    const res = await fetch('/api/google-route-optimize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stops: tour.stops })
+    });
+    const data = await res.json();
+    if (data.status === 'SUCCESS' && data.stops && data.stops.length === tour.stops.length) {
+      return {
+        tour: {
+          ...tour,
+          stops: data.stops
+        },
+        debug: data.debug
+      };
+    }
+  } catch (e) {
+    // Fallback to local optimization
+  }
+  return { tour: reorderStopsForShortestRoute(tour) };
+}
+
+/**
+ * Global optimization across ALL property stops without locking any specific start stop.
+ */
+export function reorderStopsForShortestRoute(tour: Tour): Tour {
+  if (!tour.stops || tour.stops.length <= 1) return tour;
+
+  const stops = [...tour.stops];
+  let bestSequence: TourStop[] = [...stops];
+
+  if (stops.length <= 7) {
+    const allPermutations = getPermutations(stops);
+    let minScore = Infinity;
+
+    for (const candidate of allPermutations) {
+      let score = calculateInterStopDistance(candidate);
+
+      let currentMins = timeToMinutes(tour.earliest_start || '09:30');
+
+      candidate.forEach((stop, index) => {
+        if (index > 0) {
+          const prev = candidate[index - 1];
+          const dist = calculateHaversineDistanceMeters(prev.latitude, prev.longitude, stop.latitude, stop.longitude);
+          const driveMins = Math.max(5, Math.ceil(dist / 670));
+          currentMins += driveMins;
+        }
+
+        if (stop.has_open_house && stop.open_house_start && stop.open_house_end) {
+          const ohStart = timeToMinutes(stop.open_house_start);
+          const ohEnd = timeToMinutes(stop.open_house_end);
+          if (currentMins < ohStart) {
+            score += (ohStart - currentMins) * 30;
+          } else if (currentMins > ohEnd) {
+            score += 50000;
+          }
+        }
+
+        currentMins += (stop.visit_minutes || 25) + (stop.travel_buffer_minutes || 5);
+      });
+
+      if (score < minScore) {
+        minScore = score;
+        bestSequence = candidate;
+      }
+    }
+  } else {
+    let improved = true;
+    let iterations = 0;
+    while (improved && iterations < 50) {
+      improved = false;
+      iterations++;
+      for (let i = 0; i < bestSequence.length - 1; i++) {
+        for (let j = i + 1; j < bestSequence.length; j++) {
+          const newCandidate = [...bestSequence];
+          const sub = newCandidate.slice(i, j + 1).reverse();
+          newCandidate.splice(i, j + 1 - i, ...sub);
+
+          const currentDist = calculateInterStopDistance(bestSequence);
+          const newDist = calculateInterStopDistance(newCandidate);
+
+          if (newDist < currentDist) {
+            bestSequence = newCandidate;
+            improved = true;
+          }
+        }
+      }
+    }
+  }
+
+  bestSequence.forEach((s, idx) => {
+    s.planned_order = idx + 1;
+  });
+
+  return {
+    ...tour,
+    stops: bestSequence
+  };
+}
+
 export function generateConflictRemedies(
   tour: Tour,
   warnings: string[],
@@ -56,13 +191,10 @@ export function optimizeTourSchedule(tour: Tour): {
   const warnings: string[] = [];
   const infeasibleReasons: string[] = [];
 
-  const dayStartMins = timeToMinutes(tour.earliest_start || '09:00');
+  const dayStartMins = timeToMinutes(tour.earliest_start || '09:30');
   const dayFinishMins = timeToMinutes(tour.latest_finish || '17:00');
 
-  let currentMins = dayStartMins;
-  let currentLat = tour.start_latitude;
-  let currentLng = tour.start_longitude;
-
+  let currentDepartureMins = dayStartMins;
   let totalDriveMins = 0;
   let totalVisitMins = 0;
   let totalWaitMins = 0;
@@ -70,38 +202,31 @@ export function optimizeTourSchedule(tour: Tour): {
 
   const processedStops: TourStop[] = [];
 
-  // Sort stops: LOCKED / CONFIRMED / OPEN_HOUSE first, then MUST_SEE, PREFERRED, OPTIONAL
-  const sortedStops = [...tour.stops].sort((a, b) => {
-    const aOpenHouse = a.has_open_house && a.open_house_start;
-    const bOpenHouse = b.has_open_house && b.open_house_start;
+  tour.stops.forEach((stop, index) => {
+    let driveMins = 0;
+    let distMeters = 0;
 
-    const aLocked = a.scheduling_mode === 'TIME_LOCKED' || a.appointment_status === 'CONFIRMED' || aOpenHouse;
-    const bLocked = b.scheduling_mode === 'TIME_LOCKED' || b.appointment_status === 'CONFIRMED' || bOpenHouse;
+    if (index > 0) {
+      const prevStop = tour.stops[index - 1];
+      distMeters = calculateHaversineDistanceMeters(
+        prevStop.latitude,
+        prevStop.longitude,
+        stop.latitude,
+        stop.longitude
+      );
+      totalDistMeters += distMeters;
+      driveMins = Math.max(5, Math.ceil(distMeters / 670));
+      totalDriveMins += driveMins;
+    }
 
-    if (aLocked && !bLocked) return -1;
-    if (!aLocked && bLocked) return 1;
+    const bufferMins = typeof stop.travel_buffer_minutes === 'number'
+      ? stop.travel_buffer_minutes
+      : (tour.default_travel_buffer || 5);
 
-    const priorityScore = { MUST_SEE: 3, PREFERRED: 2, OPTIONAL: 1 };
-    return priorityScore[b.priority] - priorityScore[a.priority];
-  });
+    let arrivalMins = index === 0
+      ? dayStartMins
+      : currentDepartureMins + driveMins;
 
-  sortedStops.forEach((stop, index) => {
-    // 1. Calculate Drive Time from Previous Location
-    const distMeters = calculateHaversineDistanceMeters(
-      currentLat,
-      currentLng,
-      stop.latitude,
-      stop.longitude
-    );
-    totalDistMeters += distMeters;
-
-    let driveMins = Math.max(5, Math.ceil(distMeters / 670));
-    totalDriveMins += driveMins;
-
-    // 2. Projected Arrival Time
-    let arrivalMins = currentMins + driveMins + (stop.travel_buffer_minutes || tour.default_travel_buffer);
-
-    // 3. Open House Auto-Adjustment Logic
     let openHouseWindow: AvailabilityWindow | undefined = undefined;
     if (stop.has_open_house && stop.open_house_start && stop.open_house_end) {
       const ohStartMins = timeToMinutes(stop.open_house_start);
@@ -128,19 +253,24 @@ export function optimizeTourSchedule(tour: Tour): {
       }
     }
 
-    // 4. Hard Availability Windows & Confirmed Appointments
-    const hardWindows = stop.availability_windows.filter(w => w.constraint_type === 'HARD');
-    hardWindows.forEach(win => {
-      const winStartMins = timeToMinutes(win.start_at);
-      if (arrivalMins < winStartMins) {
-        const wait = winStartMins - arrivalMins;
-        totalWaitMins += wait;
-        arrivalMins = winStartMins;
+    if (stop.scheduling_mode === 'TIME_LOCKED' || stop.appointment_status === 'CONFIRMED') {
+      const lockedTimeStr = stop.confirmed_start || stop.proposed_start || stop.planned_arrival;
+      if (lockedTimeStr) {
+        const lockedMins = timeToMinutes(lockedTimeStr);
+        if (lockedMins > 0 && arrivalMins < lockedMins) {
+          const waitNeeded = lockedMins - arrivalMins;
+          totalWaitMins += waitNeeded;
+          arrivalMins = lockedMins;
+        }
       }
-    });
+    }
 
-    const departureMins = arrivalMins + stop.access_before_minutes + stop.visit_minutes + stop.access_after_minutes;
-    totalVisitMins += stop.visit_minutes;
+    const visitMins = stop.visit_minutes || tour.default_visit_minutes || 25;
+    const accessBeforeMins = stop.access_before_minutes || 0;
+    const accessAfterMins = stop.access_after_minutes || 0;
+
+    const departureMins = arrivalMins + accessBeforeMins + visitMins + accessAfterMins;
+    totalVisitMins += visitMins;
 
     if (departureMins > dayFinishMins) {
       warnings.push(
@@ -148,21 +278,22 @@ export function optimizeTourSchedule(tour: Tour): {
       );
     }
 
+    const distMiles = Math.round((distMeters / 1609.34) * 10) / 10;
+
     const updatedStop: TourStop = {
       ...stop,
       planned_order: index + 1,
       planned_arrival: minutesToFormattedTime(arrivalMins),
       planned_departure: minutesToFormattedTime(departureMins),
+      drive_minutes_from_prev: index > 0 ? driveMins : 0,
+      drive_miles_from_prev: index > 0 ? distMiles : 0,
       availability_windows: openHouseWindow
         ? [...stop.availability_windows.filter(w => w.source !== 'OPEN_HOUSE'), openHouseWindow]
         : stop.availability_windows
     };
 
     processedStops.push(updatedStop);
-
-    currentMins = departureMins;
-    currentLat = stop.latitude;
-    currentLng = stop.longitude;
+    currentDepartureMins = departureMins + bufferMins;
   });
 
   const updatedTour: Tour = {
@@ -178,8 +309,8 @@ export function optimizeTourSchedule(tour: Tour): {
       planned_order: s.planned_order || null,
       planned_arrival: s.planned_arrival || null,
       planned_departure: s.planned_departure || null,
-      drive_seconds: 600,
-      drive_distance_meters: 5000,
+      drive_seconds: (s.drive_minutes_from_prev || 0) * 60,
+      drive_distance_meters: (s.drive_miles_from_prev || 0) * 1609.34,
       wait_seconds: 0,
       scheduled: true,
       warnings: []

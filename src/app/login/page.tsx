@@ -6,54 +6,6 @@ import { getUserProfile, saveUserProfile, logoutUser } from '@/services/storage'
 import { UserProfile } from '@/types/tour';
 import { User, ShieldCheck, ArrowRight, Building, Key, Compass, LogIn, UserPlus, Mail, LogOut, LayoutDashboard } from 'lucide-react';
 
-const DEMO_AGENTS: UserProfile[] = [
-  {
-    id: 'agent_ian',
-    full_name: 'Ian Yeung',
-    email: 'ianyeung30@gmail.com',
-    phone: '(516) 555-8820',
-    brokerage_name: 'Side Realty & Luxury Properties',
-    license_number: 'NY-1049281',
-    default_start_address: '100 Northern Blvd, Great Neck, NY 11021',
-    default_visit_minutes: 25,
-    default_access_minutes: 5,
-    default_travel_buffer: 5,
-    timezone: 'America/New_York',
-    subscription_tier: 'PAID_PRO',
-    tours_created_count: 5
-  },
-  {
-    id: 'agent_sarah',
-    full_name: 'Sarah Jenkins',
-    email: 'sjenkins@compass.com',
-    phone: '(516) 555-0192',
-    brokerage_name: 'Compass Long Island',
-    license_number: 'NY-8820192',
-    default_start_address: '45 Harbor Rd, Manhasset, NY 11030',
-    default_visit_minutes: 30,
-    default_access_minutes: 5,
-    default_travel_buffer: 5,
-    timezone: 'America/New_York',
-    subscription_tier: 'FREE_TRIAL',
-    tours_created_count: 2
-  },
-  {
-    id: 'agent_michael',
-    full_name: 'Michael Ross',
-    email: 'mross@elliman.com',
-    phone: '(516) 555-0143',
-    brokerage_name: 'Douglas Elliman Real Estate',
-    license_number: 'NY-9901432',
-    default_start_address: '12 Northern Blvd, Roslyn, NY 11576',
-    default_visit_minutes: 20,
-    default_access_minutes: 5,
-    default_travel_buffer: 5,
-    timezone: 'America/New_York',
-    subscription_tier: 'PAID_PRO',
-    tours_created_count: 12
-  }
-];
-
 export default function LoginPage() {
   const router = useRouter();
   const [profile, setProfile] = React.useState(getUserProfile());
@@ -67,12 +19,6 @@ export default function LoginPage() {
   const [phone, setPhone] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-
-  const handleSelectAgent = (agent: UserProfile) => {
-    saveUserProfile(agent);
-    setProfile(agent);
-    router.push('/dashboard');
-  };
 
   const handleLogout = () => {
     logoutUser();
@@ -101,7 +47,8 @@ export default function LoginPage() {
           full_name: data.user.full_name,
           email: data.user.email,
           brokerage_name: data.user.brokerage_name || 'Side Luxury Real Estate',
-          subscription_tier: 'PAID_PRO'
+          subscription_tier: 'PAID_PRO',
+          is_verified: true
         });
         router.push('/dashboard');
       } else {
@@ -151,7 +98,8 @@ export default function LoginPage() {
           email: data.user.email,
           phone: data.user.phone,
           brokerage_name: data.user.brokerage_name || 'Side Luxury Real Estate',
-          subscription_tier: data.user.subscription_tier || 'FREE_TRIAL'
+          subscription_tier: data.user.subscription_tier || 'FREE_TRIAL',
+          is_verified: true
         });
         router.push('/dashboard');
       }
@@ -173,7 +121,7 @@ export default function LoginPage() {
           Agent Account Session
         </h1>
         <p className="text-xs text-slate-400">
-          Manage your active agent account session or switch profiles for cross-platform showing sync.
+          Sign in with Google OAuth or email to access your showing workspace, synced across Web, iOS, and Android.
         </p>
       </div>
 
@@ -298,6 +246,31 @@ export default function LoginPage() {
               />
             </div>
 
+            {mode === 'REGISTER' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Brokerage Name</label>
+                  <input
+                    type="text"
+                    value={brokerage}
+                    onChange={e => setBrokerage(e.target.value)}
+                    placeholder="Side Luxury Real Estate"
+                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Mobile Phone</label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="(516) 555-0100"
+                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -308,25 +281,6 @@ export default function LoginPage() {
           </form>
         </>
       )}
-
-      {/* Preset Agent Quick Switcher */}
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-          Or Quick Switch Agent Profile
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          {DEMO_AGENTS.map(agent => (
-            <div
-              key={agent.id}
-              onClick={() => handleSelectAgent(agent)}
-              className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 transition-all cursor-pointer space-y-1 text-xs"
-            >
-              <div className="font-bold text-white truncate">{agent.full_name}</div>
-              <div className="text-[10px] text-slate-400 truncate">{agent.brokerage_name}</div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

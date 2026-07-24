@@ -3,64 +3,12 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserProfile, saveUserProfile } from '@/services/storage';
-import { UserProfile } from '@/types/tour';
 import { X, Compass, LogIn, UserPlus, Mail, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const DEMO_AGENTS: UserProfile[] = [
-  {
-    id: 'agent_ian',
-    full_name: 'Ian Yeung',
-    email: 'ianyeung30@gmail.com',
-    phone: '(516) 555-8820',
-    brokerage_name: 'Side Realty & Luxury Properties',
-    license_number: 'NY-1049281',
-    default_start_address: '100 Northern Blvd, Great Neck, NY 11021',
-    default_visit_minutes: 25,
-    default_access_minutes: 5,
-    default_travel_buffer: 5,
-    timezone: 'America/New_York',
-    subscription_tier: 'PAID_PRO',
-    is_verified: true,
-    tours_created_count: 5
-  },
-  {
-    id: 'agent_sarah',
-    full_name: 'Sarah Jenkins',
-    email: 'sjenkins@compass.com',
-    phone: '(516) 555-0192',
-    brokerage_name: 'Compass Long Island',
-    license_number: 'NY-8820192',
-    default_start_address: '45 Harbor Rd, Manhasset, NY 11030',
-    default_visit_minutes: 30,
-    default_access_minutes: 5,
-    default_travel_buffer: 5,
-    timezone: 'America/New_York',
-    subscription_tier: 'FREE_TRIAL',
-    is_verified: true,
-    tours_created_count: 2
-  },
-  {
-    id: 'agent_michael',
-    full_name: 'Michael Ross',
-    email: 'mross@elliman.com',
-    phone: '(516) 555-0143',
-    brokerage_name: 'Douglas Elliman Real Estate',
-    license_number: 'NY-9901432',
-    default_start_address: '12 Northern Blvd, Roslyn, NY 11576',
-    default_visit_minutes: 20,
-    default_access_minutes: 5,
-    default_travel_buffer: 5,
-    timezone: 'America/New_York',
-    subscription_tier: 'PAID_PRO',
-    is_verified: true,
-    tours_created_count: 12
-  }
-];
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
@@ -77,12 +25,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
 
   if (!isOpen) return null;
-
-  const handleSelectAgent = (agent: UserProfile) => {
-    saveUserProfile(agent);
-    onClose();
-    router.push('/dashboard');
-  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -191,6 +133,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
@@ -201,6 +144,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <div className="p-4 overflow-y-auto space-y-4 bg-slate-950 text-xs">
           {/* Google OAuth Quick Sign In */}
           <button
+            type="button"
             onClick={handleGoogleSignIn}
             disabled={loading}
             className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs flex items-center justify-center gap-2 shadow transition-all active:scale-95 disabled:opacity-50"
@@ -299,25 +243,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               <span>{loading ? 'Authenticating...' : mode === 'REGISTER' ? 'Register Account (Sends Verification Link)' : 'Sign In & Enter Workspace'}</span>
             </button>
           </form>
-
-          {/* Preset Demo Agent Quick Switcher */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-800">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Quick Switch Agent Demo Profile
-            </label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {DEMO_AGENTS.map(agent => (
-                <div
-                  key={agent.id}
-                  onClick={() => handleSelectAgent(agent)}
-                  className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 transition-all cursor-pointer space-y-0.5 text-[11px]"
-                >
-                  <div className="font-bold text-white truncate">{agent.full_name}</div>
-                  <div className="text-[9px] text-slate-400 truncate">{agent.brokerage_name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
