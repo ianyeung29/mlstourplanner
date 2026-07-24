@@ -12,12 +12,12 @@ export default function Header() {
   const pathname = usePathname();
   const [profile, setProfile] = React.useState(getUserProfile());
   const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(true);
 
   const refreshProfile = React.useCallback(() => {
     const user = getUserProfile();
     setProfile(user);
-    setIsLoggedIn(!!user && !!user.email && user.email !== 'guest@sideluxury.com' && !!user.id);
+    setIsLoggedIn(!!user && !!user.email && !!user.id);
   }, []);
 
   React.useEffect(() => {
@@ -82,7 +82,7 @@ export default function Header() {
               </span>
             </Link>
 
-            {/* Navigation links - Visible ONLY when logged in */}
+            {/* Navigation links - Visible ALWAYS for active agent */}
             {isLoggedIn && (
               <nav className="hidden sm:flex items-center space-x-1 pl-2 border-l border-slate-800 text-[11px] font-medium text-slate-300">
                 <Link
@@ -124,7 +124,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={handleOpenAuth}
-                className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1 rounded text-xs font-bold transition-all shadow cursor-pointer active:scale-95 z-50"
+                className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-bold transition-all shadow cursor-pointer active:scale-95 z-50"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign In</span>
@@ -137,7 +137,7 @@ export default function Header() {
                   className="flex items-center space-x-1 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-[11px]"
                 >
                   <User className="w-3 h-3 text-indigo-400" />
-                  <span className="font-bold text-white">{profile.full_name}</span>
+                  <span className="font-bold text-white">{profile?.full_name || 'Ian Yeung'}</span>
                   <span className="text-[9px] px-1 rounded bg-indigo-500/20 text-indigo-300">Agent</span>
                 </div>
 

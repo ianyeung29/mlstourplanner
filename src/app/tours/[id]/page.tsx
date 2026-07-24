@@ -15,6 +15,8 @@ import ConflictBanner from '@/components/ConflictBanner';
 import AppointmentModal from '@/components/AppointmentModal';
 import ClientEmailModal from '@/components/ClientEmailModal';
 import AiUploadModal from '@/components/AiUploadModal';
+import EditListingModal from '@/components/EditListingModal';
+import RouteOptionModal, { RouteOption } from '@/components/RouteOptionModal';
 import {
   Calendar,
   Clock,
@@ -46,6 +48,10 @@ export default function TourWorkspacePage() {
   const [infeasibleReasons, setInfeasibleReasons] = React.useState<string[]>([]);
   const [isOptimizing, setIsOptimizing] = React.useState(false);
 
+  // Route Options Modal State
+  const [routeOptions, setRouteOptions] = React.useState<RouteOption[]>([]);
+  const [isRouteOptionModalOpen, setIsRouteOptionModalOpen] = React.useState(false);
+
   // Edit Tour Modal State
   const [isEditTourOpen, setIsEditTourOpen] = React.useState(false);
   const [editName, setEditName] = React.useState('');
@@ -61,6 +67,10 @@ export default function TourWorkspacePage() {
 
   // AI Upload Modal state
   const [isAiUploadOpen, setIsAiUploadOpen] = React.useState(false);
+
+  // Edit Listing Modal state
+  const [activeEditStop, setActiveEditStop] = React.useState<TourStop | null>(null);
+  const [isEditListingOpen, setIsEditListingOpen] = React.useState(false);
 
   // Appointment Modal state
   const [activeMessageStop, setActiveMessageStop] = React.useState<TourStop | null>(null);
@@ -118,11 +128,38 @@ export default function TourWorkspacePage() {
     setIsEditTourOpen(false);
   };
 
+  const handleQuickUpdateTourHeader = (newDate: string, newStart: string, newFinish: string) => {
+    if (!tour) return;
+    const updated: Tour = {
+      ...tour,
+      tour_date: newDate,
+      earliest_start: newStart,
+      latest_finish: newFinish
+    };
+
+    const { updatedTour, result } = optimizeTourSchedule(updated);
+    saveTour(updatedTour);
+    setTour(updatedTour);
+    setWarnings(result.warnings);
+    setInfeasibleReasons(result.infeasibleReasons || []);
+  };
+
   const handleDeleteTour = () => {
     if (confirm(`Are you sure you want to delete tour "${tour.name}"?`)) {
       deleteTour(tour.id);
       router.push('/');
     }
+  };
+
+  // Handle manual saving of modified listing details
+  const handleSaveStopDetails = (updatedStop: TourStop) => {
+    const updatedStops = tour.stops.map(s => s.id === updatedStop.id ? updatedStop : s);
+    const updated = { ...tour, stops: updatedStops };
+    const { updatedTour, result } = optimizeTourSchedule(updated);
+    saveTour(updatedTour);
+    setTour(updatedTour);
+    setWarnings(result.warnings);
+    setInfeasibleReasons(result.infeasibleReasons || []);
   };
 
   // Handle Stop Buffer Changes inline from TimelineView
@@ -138,6 +175,16 @@ export default function TourWorkspacePage() {
       return s;
     });
 
+    const updated = { ...tour, stops: updatedStops };
+    const { updatedTour, result } = optimizeTourSchedule(updated);
+    saveTour(updatedTour);
+    setTour(updatedTour);
+    setWarnings(result.warnings);
+    setInfeasibleReasons(result.infeasibleReasons || []);
+  };
+
+  const handleUpdateStopPriority = (stopId: string, priority: 'MUST_SEE' | 'PREFERRED' | 'OPTIONAL') => {
+    const updatedStops = tour.stops.map(s => s.id === stopId ? { ...s, priority } : s);
     const updated = { ...tour, stops: updatedStops };
     const { updatedTour, result } = optimizeTourSchedule(updated);
     saveTour(updatedTour);
@@ -214,43 +261,47 @@ export default function TourWorkspacePage() {
     setIsAddingMls(false);
   };
 
-  const handleAddExtractedStop = async (extracted: Partial<TourStop>) => {
-    const targetAddr = extracted.normalized_address || extracted.original_input || '78 Shelter Rock Rd, Manhasset, NY 11030';
-    const geocoded = await geocodeAddress(targetAddr);
+  const handleAddExtractedStops = async (extractedList: Partial<TourStop>[]) => {
+    if (!extractedList || extractedList.length === 0) return;
 
-    const newStop: TourStop = {
-      id: `stop_ai_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      tour_id: tour.id,
-      original_input: targetAddr,
-      normalized_address: geocoded.normalized_address || targetAddr,
-      latitude: geocoded.latitude,
-      longitude: geocoded.longitude,
-      geocode_status: 'RESOLVED',
-      mls_number: extracted.mls_number || `ONEKEY-${Math.floor(1000000 + Math.random() * 9000000)}`,
-      list_price: extracted.list_price || 2150000,
-      beds: extracted.beds || 5,
-      baths: extracted.baths || 4.5,
-      sqft: extracted.sqft || 3850,
-      image_url: extracted.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
-      has_open_house: extracted.has_open_house || false,
-      open_house_start: extracted.open_house_start,
-      open_house_end: extracted.open_house_end,
-      listing_agent_name: extracted.listing_agent_name || 'Victoria Vance',
-      listing_agent_phone: extracted.listing_agent_phone || '(516) 555-0188',
-      listing_agent_email: extracted.listing_agent_email || 'vvance@compass.com',
-      listing_brokerage: extracted.listing_brokerage || 'Compass Long Island',
-      agent_notes: extracted.agent_notes || 'Extracted via DeepSeek AI Scanner',
-      priority: 'PREFERRED',
-      appointment_status: 'NOT_REQUESTED',
-      scheduling_mode: 'FLEXIBLE',
-      visit_minutes: tour.default_visit_minutes,
-      access_before_minutes: tour.default_access_minutes,
-      access_after_minutes: 0,
-      travel_buffer_minutes: tour.default_travel_buffer,
-      availability_windows: []
-    };
+    const newStops: TourStop[] = await Promise.all(extractedList.map(async (extracted, idx) => {
+      const targetAddr = extracted.normalized_address || extracted.original_input || '78 Shelter Rock Rd, Manhasset, NY 11030';
+      const geocoded = await geocodeAddress(targetAddr);
 
-    const updatedStops = [...tour.stops, newStop];
+      return {
+        id: `stop_ai_${Date.now()}_${idx}_${Math.floor(Math.random() * 1000)}`,
+        tour_id: tour.id,
+        original_input: targetAddr,
+        normalized_address: geocoded.normalized_address || targetAddr,
+        latitude: geocoded.latitude,
+        longitude: geocoded.longitude,
+        geocode_status: 'RESOLVED',
+        mls_number: extracted.mls_number || `ONEKEY-${Math.floor(1000000 + Math.random() * 9000000)}`,
+        list_price: extracted.list_price || 2150000,
+        beds: extracted.beds || 5,
+        baths: extracted.baths || 4.5,
+        sqft: extracted.sqft || 3850,
+        image_url: extracted.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
+        has_open_house: extracted.has_open_house || false,
+        open_house_start: extracted.open_house_start,
+        open_house_end: extracted.open_house_end,
+        listing_agent_name: extracted.listing_agent_name || 'N/A',
+        listing_agent_phone: extracted.listing_agent_phone || 'N/A',
+        listing_agent_email: extracted.listing_agent_email || 'N/A',
+        listing_brokerage: extracted.listing_brokerage || 'N/A',
+        agent_notes: extracted.agent_notes || 'Extracted via DeepSeek AI Scanner',
+        priority: 'PREFERRED',
+        appointment_status: 'NOT_REQUESTED',
+        scheduling_mode: 'FLEXIBLE',
+        visit_minutes: tour.default_visit_minutes,
+        access_before_minutes: tour.default_access_minutes,
+        access_after_minutes: 0,
+        travel_buffer_minutes: tour.default_travel_buffer,
+        availability_windows: []
+      };
+    }));
+
+    const updatedStops = [...tour.stops, ...newStops];
     const { tour: reorderedTour } = await reorderStopsWithGoogle({ ...tour, stops: updatedStops });
     const { updatedTour, result } = optimizeTourSchedule(reorderedTour);
 
@@ -258,7 +309,9 @@ export default function TourWorkspacePage() {
     setTour(updatedTour);
     setWarnings(result.warnings);
     setInfeasibleReasons(result.infeasibleReasons || []);
-    setSelectedStopId(newStop.id);
+    if (newStops.length > 0) {
+      setSelectedStopId(newStops[0].id);
+    }
   };
 
   const handleMoveStop = (index: number, direction: 'up' | 'down') => {
@@ -327,6 +380,29 @@ export default function TourWorkspacePage() {
   const handleReoptimize = async () => {
     setIsOptimizing(true);
     try {
+      const res = await fetch('/api/google-route-optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stops: tour.stops,
+          earliest_start: tour.earliest_start,
+          latest_finish: tour.latest_finish
+        })
+      });
+      const data = await res.json();
+
+      if (data.options && data.options.length > 0) {
+        setRouteOptions(data.options);
+        setIsRouteOptionModalOpen(true);
+      } else {
+        const { tour: reordered } = await reorderStopsWithGoogle(tour);
+        const { updatedTour, result } = optimizeTourSchedule(reordered);
+        saveTour(updatedTour);
+        setTour(updatedTour);
+        setWarnings(result.warnings);
+        setInfeasibleReasons(result.infeasibleReasons || []);
+      }
+    } catch (e) {
       const { tour: reordered } = await reorderStopsWithGoogle(tour);
       const { updatedTour, result } = optimizeTourSchedule(reordered);
       saveTour(updatedTour);
@@ -338,10 +414,19 @@ export default function TourWorkspacePage() {
     }
   };
 
+  const handleSelectRouteOption = (option: RouteOption) => {
+    const updated = { ...tour, stops: option.stops };
+    const { updatedTour, result } = optimizeTourSchedule(updated);
+    saveTour(updatedTour);
+    setTour(updatedTour);
+    setWarnings(result.warnings);
+    setInfeasibleReasons(result.infeasibleReasons || []);
+  };
+
   return (
     <div className="space-y-4">
       {/* Workspace Header Toolbar */}
-      <div className="bg-slate-900/90 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-slate-800 shadow-lg space-y-3">
+      <div className="bg-slate-900/90 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-slate-800 shadow-lg space-y-2.5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
@@ -373,52 +458,76 @@ export default function TourWorkspacePage() {
               {tour.client_display_name && (
                 <span>Client: <strong className="text-slate-200">{tour.client_display_name}</strong></span>
               )}
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-indigo-400" />
-                {tour.tour_date}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3 text-indigo-400" />
-                Window: {tour.earliest_start} – {tour.latest_finish}
-              </span>
+              
+              {/* Inline Interactive Tour Date Picker */}
+              <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800">
+                <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="text-slate-400 font-semibold">Date:</span>
+                <input
+                  type="date"
+                  value={tour.tour_date}
+                  onChange={(e) => handleQuickUpdateTourHeader(e.target.value, tour.earliest_start, tour.latest_finish)}
+                  className="bg-transparent text-white font-extrabold text-xs focus:outline-none cursor-pointer"
+                />
+              </div>
+
+              {/* Inline Interactive Tour Timeframe Window Pickers */}
+              <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
+                <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="text-slate-400 font-semibold">Window:</span>
+                <input
+                  type="time"
+                  value={tour.earliest_start}
+                  onChange={(e) => handleQuickUpdateTourHeader(tour.tour_date, e.target.value, tour.latest_finish)}
+                  className="bg-slate-900 text-white font-extrabold text-xs px-1 py-0.5 rounded border border-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                />
+                <span className="text-slate-500 font-bold">–</span>
+                <input
+                  type="time"
+                  value={tour.latest_finish}
+                  onChange={(e) => handleQuickUpdateTourHeader(tour.tour_date, tour.earliest_start, e.target.value)}
+                  className="bg-slate-900 text-white font-extrabold text-xs px-1 py-0.5 rounded border border-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Action Buttons Toolbar: Compact Single Horizontal Row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 shrink-0">
             <button
               onClick={() => setIsClientEmailOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition-colors shrink-0"
             >
-              <Mail className="w-3.5 h-3.5" />
+              <Mail className="w-3 h-3" />
               <span>Email Client Itinerary</span>
             </button>
 
             {/* DeepSeek AI Document Scanner Trigger */}
             <button
               onClick={() => setIsAiUploadOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-lg transition-transform active:scale-95 cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1 shadow-lg transition-transform active:scale-95 cursor-pointer shrink-0"
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+              <Sparkles className="w-3 h-3 text-purple-200" />
               <span>+ AI Scan PDF / Image</span>
             </button>
 
             <button
               onClick={() => setShowAddMlsInput(!showAddMlsInput)}
-              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 shadow transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition-colors shrink-0"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3 h-3" />
               <span>+ Add MLS #</span>
             </button>
 
             <button
               onClick={handleReoptimize}
               disabled={isOptimizing}
-              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/50 text-xs font-bold flex items-center gap-1 shadow transition-all disabled:opacity-50 cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/50 text-[11px] font-bold flex items-center gap-1 shadow transition-all disabled:opacity-50 cursor-pointer shrink-0"
             >
               {isOptimizing ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <Loader2 className="w-3 h-3 animate-spin text-white" />
               ) : (
-                <RefreshCw className="w-3.5 h-3.5 text-white" />
+                <RefreshCw className="w-3 h-3 text-white" />
               )}
               <span>Re-optimize</span>
             </button>
@@ -426,16 +535,16 @@ export default function TourWorkspacePage() {
             <Link
               href={`/tours/${tour.id}/print`}
               target="_blank"
-              className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-bold flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] font-bold flex items-center gap-1 transition-colors shrink-0"
             >
-              <Printer className="w-3.5 h-3.5" />
+              <Printer className="w-3 h-3" />
               <span>Print Sheet</span>
             </Link>
 
             <button
               onClick={handleDeleteTour}
               title="Delete Tour"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-colors"
+              className="p-1 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-colors shrink-0"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -511,7 +620,12 @@ export default function TourWorkspacePage() {
               setActiveMessageStop(stop);
               setIsMessageModalOpen(true);
             }}
+            onOpenEditListingModal={(stop) => {
+              setActiveEditStop(stop);
+              setIsEditListingOpen(true);
+            }}
             onUpdateStopBuffers={handleUpdateStopBuffers}
+            onUpdateStopPriority={handleUpdateStopPriority}
             onRemoveStop={handleRemoveStop}
             onReoptimize={handleReoptimize}
             isOptimizing={isOptimizing}
@@ -529,11 +643,27 @@ export default function TourWorkspacePage() {
         </div>
       </div>
 
+      {/* Multi-Option Route Optimization Selection Modal */}
+      <RouteOptionModal
+        isOpen={isRouteOptionModalOpen}
+        onClose={() => setIsRouteOptionModalOpen(false)}
+        options={routeOptions}
+        onSelectOption={handleSelectRouteOption}
+      />
+
+      {/* Edit Listing Details Modal */}
+      <EditListingModal
+        stop={activeEditStop}
+        isOpen={isEditListingOpen}
+        onClose={() => setIsEditListingOpen(false)}
+        onSaveStop={handleSaveStopDetails}
+      />
+
       {/* DeepSeek AI Document Scanner Upload Modal */}
       <AiUploadModal
         isOpen={isAiUploadOpen}
         onClose={() => setIsAiUploadOpen(false)}
-        onAddExtractedStop={handleAddExtractedStop}
+        onAddExtractedStops={handleAddExtractedStops}
       />
 
       {/* Edit Tour Settings Modal */}

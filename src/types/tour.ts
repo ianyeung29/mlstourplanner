@@ -50,6 +50,7 @@ export interface TourStop {
   image_url?: string;
 
   has_open_house?: boolean;
+  open_house_date?: string;
   open_house_start?: string;
   open_house_end?: string;
 

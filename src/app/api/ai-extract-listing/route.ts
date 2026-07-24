@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   };
 
   try {
-    const { imageBase64, textContent, fileName } = await request.json();
+    const { imageBase64, textContent, fileName, isMultipleListings } = await request.json();
 
     if (!imageBase64 && !textContent) {
       return NextResponse.json({
@@ -33,10 +33,16 @@ export async function POST(request: Request) {
 
     const cleanInputText = (textContent || '').trim();
 
-    const prompt = `You are an expert real estate document parser.
-Carefully parse the following extracted OCR text from one or more uploaded real estate listing flyers, MLS sheets, or agent documents ("${fileName || 'Uploaded Documents'}").
+    const multipleListingsInstruction = isMultipleListings
+      ? 'CRITICAL: The user has checked "Multiple Listings". Each uploaded file/image represents a SEPARATE, DISTINCT property listing. You MUST extract a separate listing object for EACH uploaded file or image in the input text.'
+      : 'Parse the provided OCR text from one or more pages into listing objects.';
 
-Extract all distinct property listings present in the documents into a JSON array of listing objects (or a single object array if only 1 listing is present).
+    const prompt = `You are an expert real estate document parser.
+Carefully parse the following extracted OCR text from uploaded real estate listing flyers, MLS sheets, or agent documents ("${fileName || 'Uploaded Documents'}").
+
+${multipleListingsInstruction}
+
+Extract all distinct property listings present in the documents into a JSON array of listing objects.
 
 REQUIRED JSON ARRAY FORMAT (return ONLY valid JSON array):
 [
@@ -52,6 +58,7 @@ REQUIRED JSON ARRAY FORMAT (return ONLY valid JSON array):
     "listing_agent_email": "agent email",
     "listing_brokerage": "brokerage name",
     "has_open_house": boolean,
+    "open_house_date": "date or day of week e.g. Saturday, Sunday, 07/26, or YYYY-MM-DD",
     "open_house_start": "HH:MM",
     "open_house_end": "HH:MM",
     "agent_notes": "showing notes or lockbox instructions"

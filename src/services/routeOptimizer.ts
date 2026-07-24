@@ -1,7 +1,7 @@
 import { Tour, TourStop, RouteOptimizationResult, AvailabilityWindow } from '@/types/tour';
 import { calculateHaversineDistanceMeters } from './geocode';
 
-function timeToMinutes(timeStr: string): number {
+function timeToMinutes(timeStr?: string): number {
   if (!timeStr) return 0;
   const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
   if (!match) return 0;
@@ -23,6 +23,76 @@ function minutesToFormattedTime(totalMinutes: number): string {
   if (hours === 0) hours = 12;
   const minStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
   return `${hours}:${minStr} ${ampm}`;
+}
+
+function getDayNameFromDateStr(dateStr: string): string {
+  if (!dateStr) return '';
+  const dateObj = new Date(dateStr + 'T00:00:00');
+  if (isNaN(dateObj.getTime())) return '';
+  return dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
+export function isOpenHouseOnTourDate(stop: TourStop, tourDate?: string): boolean {
+  if (!stop.has_open_house) return false;
+  if (!stop.open_house_date || !tourDate) return true;
+
+  const ohDateClean = stop.open_house_date.trim().toLowerCase();
+  const tourDateClean = tourDate.trim().toLowerCase();
+
+  if (ohDateClean === tourDateClean || tourDateClean.includes(ohDateClean)) return true;
+
+  const tourDayName = getDayNameFromDateStr(tourDate).toLowerCase();
+  const tourDayShort = tourDayName.substring(0, 3);
+
+  if (tourDayName && (ohDateClean.includes(tourDayName) || ohDateClean.includes(tourDayShort))) {
+    return true;
+  }
+
+  const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const ohDayName = daysOfWeek.find(d => ohDateClean.includes(d) || (d.length >= 3 && ohDateClean.includes(d.substring(0, 3))));
+
+  if (ohDayName && tourDayName && ohDayName !== tourDayName) {
+    return false;
+  }
+
+  return true;
+}
+
+export function ensureStartWithClientTime(tour: Tour): Tour {
+  if (!tour.stops || tour.stops.length <= 1) return tour;
+
+  const dayStartMins = timeToMinutes(tour.earliest_start || '09:30');
+  const stops = [...tour.stops];
+
+  const firstStop = stops[0];
+  const isActiveOpenHouseToday = isOpenHouseOnTourDate(firstStop, tour.tour_date);
+
+  if (firstStop.has_open_house && firstStop.open_house_start && isActiveOpenHouseToday) {
+    const ohStartMins = timeToMinutes(firstStop.open_house_start);
+    if (ohStartMins > dayStartMins) {
+      const flexIdx = stops.findIndex(s => {
+        if (!s.has_open_house) return true;
+        if (!isOpenHouseOnTourDate(s, tour.tour_date)) return true;
+        const sOhStart = timeToMinutes(s.open_house_start);
+        return sOhStart <= dayStartMins;
+      });
+
+      if (flexIdx > 0) {
+        const temp = stops[0];
+        stops[0] = stops[flexIdx];
+        stops[flexIdx] = temp;
+      }
+    }
+  }
+
+  stops.forEach((s, idx) => {
+    s.planned_order = idx + 1;
+  });
+
+  return {
+    ...tour,
+    stops
+  };
 }
 
 // Helper to generate all permutations of an array
@@ -104,8 +174,23 @@ export function reorderStopsForShortestRoute(tour: Tour): Tour {
         if (index > 0) {
           const prev = candidate[index - 1];
           const dist = calculateHaversineDistanceMeters(prev.latitude, prev.longitude, stop.latitude, stop.longitude);
-          const driveMins = Math.max(5, Math.ceil(dist / 670));
+          const driveMins = Math.max(2, Math.ceil(dist / 670));
           currentMins += driveMins;
+        }
+
+        const finishWindowMins = timeToMinutes(tour.latest_finish || '15:30');
+        const visitMins = stop.visit_minutes || 25;
+        const stopFinishMins = currentMins + visitMins;
+
+        if (stopFinishMins > finishWindowMins) {
+          const overrunMins = stopFinishMins - finishWindowMins;
+          if (stop.priority === 'MUST_SEE') {
+            score += 10000000 + (overrunMins * 10000);
+          } else if (stop.priority === 'PREFERRED' || !stop.priority) {
+            score += 500000 + (overrunMins * 1000);
+          } else {
+            score += 10000 + (overrunMins * 100);
+          }
         }
 
         if (stop.has_open_house && stop.open_house_start && stop.open_house_end) {
@@ -118,7 +203,7 @@ export function reorderStopsForShortestRoute(tour: Tour): Tour {
           }
         }
 
-        currentMins += (stop.visit_minutes || 25) + (stop.travel_buffer_minutes || 5);
+        currentMins += visitMins + (stop.travel_buffer_minutes || 5);
       });
 
       if (score < minScore) {
@@ -152,6 +237,12 @@ export function reorderStopsForShortestRoute(tour: Tour): Tour {
 
   bestSequence.forEach((s, idx) => {
     s.planned_order = idx + 1;
+    if (idx > 0) {
+      const prev = bestSequence[idx - 1];
+      const distMeters = calculateHaversineDistanceMeters(prev.latitude, prev.longitude, s.latitude, s.longitude);
+      s.drive_miles_from_prev = Math.round((distMeters / 1609.34) * 10) / 10;
+      s.drive_minutes_from_prev = Math.max(3, Math.ceil(distMeters / 670));
+    }
   });
 
   return {
@@ -184,10 +275,11 @@ export function generateConflictRemedies(
   return remedies;
 }
 
-export function optimizeTourSchedule(tour: Tour): {
+export function optimizeTourSchedule(tourInput: Tour): {
   updatedTour: Tour;
   result: RouteOptimizationResult;
 } {
+  const tour = ensureStartWithClientTime(tourInput);
   const warnings: string[] = [];
   const infeasibleReasons: string[] = [];
 
@@ -207,15 +299,21 @@ export function optimizeTourSchedule(tour: Tour): {
     let distMeters = 0;
 
     if (index > 0) {
-      const prevStop = tour.stops[index - 1];
-      distMeters = calculateHaversineDistanceMeters(
-        prevStop.latitude,
-        prevStop.longitude,
-        stop.latitude,
-        stop.longitude
-      );
+      if (typeof stop.drive_minutes_from_prev === 'number' && stop.drive_minutes_from_prev > 0) {
+        driveMins = stop.drive_minutes_from_prev;
+        const distMiles = stop.drive_miles_from_prev || 0;
+        distMeters = distMiles * 1609.34;
+      } else {
+        const prevStop = tour.stops[index - 1];
+        distMeters = calculateHaversineDistanceMeters(
+          prevStop.latitude,
+          prevStop.longitude,
+          stop.latitude,
+          stop.longitude
+        );
+        driveMins = Math.max(3, Math.ceil(distMeters / 670));
+      }
       totalDistMeters += distMeters;
-      driveMins = Math.max(5, Math.ceil(distMeters / 670));
       totalDriveMins += driveMins;
     }
 
@@ -228,27 +326,35 @@ export function optimizeTourSchedule(tour: Tour): {
       : currentDepartureMins + driveMins;
 
     let openHouseWindow: AvailabilityWindow | undefined = undefined;
-    if (stop.has_open_house && stop.open_house_start && stop.open_house_end) {
-      const ohStartMins = timeToMinutes(stop.open_house_start);
-      const ohEndMins = timeToMinutes(stop.open_house_end);
-      openHouseWindow = {
-        id: `oh_${stop.id}`,
-        start_at: stop.open_house_start,
-        end_at: stop.open_house_end,
-        constraint_type: 'HARD',
-        source: 'OPEN_HOUSE'
-      };
+    const isActiveOpenHouseToday = isOpenHouseOnTourDate(stop, tour.tour_date);
 
-      if (arrivalMins < ohStartMins) {
-        const waitNeeded = ohStartMins - arrivalMins;
-        totalWaitMins += waitNeeded;
+    if (stop.has_open_house && stop.open_house_start && stop.open_house_end) {
+      if (isActiveOpenHouseToday) {
+        const ohStartMins = timeToMinutes(stop.open_house_start);
+        const ohEndMins = timeToMinutes(stop.open_house_end);
+        openHouseWindow = {
+          id: `oh_${stop.id}`,
+          start_at: stop.open_house_start,
+          end_at: stop.open_house_end,
+          constraint_type: 'HARD',
+          source: 'OPEN_HOUSE'
+        };
+
+        if (arrivalMins < ohStartMins) {
+          const waitNeeded = ohStartMins - arrivalMins;
+          totalWaitMins += waitNeeded;
+          warnings.push(
+            `🏠 Open House Auto-Adjustment: Scheduled Stop #${index + 1} (${stop.normalized_address}) at ${minutesToFormattedTime(ohStartMins)} to align with Open House hours.`
+          );
+          arrivalMins = ohStartMins;
+        } else if (arrivalMins + stop.visit_minutes > ohEndMins) {
+          infeasibleReasons.push(
+            `⚠️ Open House Conflict: Stop #${index + 1} (${stop.normalized_address}) arrives at ${minutesToFormattedTime(arrivalMins)} which exceeds Open House end time (${minutesToFormattedTime(ohEndMins)}).`
+          );
+        }
+      } else {
         warnings.push(
-          `🏠 Open House Auto-Adjustment: Added ${waitNeeded}m wait for Stop #${index + 1} (${stop.normalized_address}) to align with Open House starting at ${minutesToFormattedTime(ohStartMins)}.`
-        );
-        arrivalMins = ohStartMins;
-      } else if (arrivalMins + stop.visit_minutes > ohEndMins) {
-        infeasibleReasons.push(
-          `⚠️ Open House Conflict: Stop #${index + 1} (${stop.normalized_address}) arrives at ${minutesToFormattedTime(arrivalMins)} which exceeds Open House end time (${minutesToFormattedTime(ohEndMins)}).`
+          `📅 Open House Date Notice: Stop #${index + 1} (${stop.normalized_address}) has an Open House on ${stop.open_house_date || 'a different day'}, but your showing tour is scheduled for ${tour.tour_date}. Standard appointment request required.`
         );
       }
     }
@@ -278,15 +384,17 @@ export function optimizeTourSchedule(tour: Tour): {
       );
     }
 
-    const distMiles = Math.round((distMeters / 1609.34) * 10) / 10;
+    const calculatedMiles = Math.round((distMeters / 1609.34) * 10) / 10;
+    const finalDriveMins = index > 0 ? (typeof stop.drive_minutes_from_prev === 'number' && stop.drive_minutes_from_prev > 0 ? stop.drive_minutes_from_prev : driveMins) : 0;
+    const finalDriveMiles = index > 0 ? (typeof stop.drive_miles_from_prev === 'number' && stop.drive_miles_from_prev > 0 ? stop.drive_miles_from_prev : calculatedMiles) : 0;
 
     const updatedStop: TourStop = {
       ...stop,
       planned_order: index + 1,
       planned_arrival: minutesToFormattedTime(arrivalMins),
       planned_departure: minutesToFormattedTime(departureMins),
-      drive_minutes_from_prev: index > 0 ? driveMins : 0,
-      drive_miles_from_prev: index > 0 ? distMiles : 0,
+      drive_minutes_from_prev: finalDriveMins,
+      drive_miles_from_prev: finalDriveMiles,
       availability_windows: openHouseWindow
         ? [...stop.availability_windows.filter(w => w.source !== 'OPEN_HOUSE'), openHouseWindow]
         : stop.availability_windows

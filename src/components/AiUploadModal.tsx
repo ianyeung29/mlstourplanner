@@ -3,16 +3,17 @@
 import React from 'react';
 import { TourStop } from '@/types/tour';
 import { createWorker } from 'tesseract.js';
-import { X, UploadCloud, FileText, Sparkles, CheckCircle2, Home, Bed, Bath, User, Phone, Mail, Building, Loader2, AlertTriangle, Trash2, Plus, Image as ImageIcon } from 'lucide-react';
+import { X, UploadCloud, FileText, Sparkles, CheckCircle2, Home, Bed, Bath, User, Phone, Mail, Building, Loader2, AlertTriangle, Trash2, Plus, Image as ImageIcon, CheckSquare } from 'lucide-react';
 
 interface AiUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddExtractedStop: (stop: Partial<TourStop>) => void;
+  onAddExtractedStops: (stops: Partial<TourStop>[]) => void;
 }
 
-export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: AiUploadModalProps) {
+export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: AiUploadModalProps) {
   const [files, setFiles] = React.useState<File[]>([]);
+  const [isMultipleListings, setIsMultipleListings] = React.useState(true);
   const [isScanning, setIsScanning] = React.useState(false);
   const [currentFileScanning, setCurrentFileScanning] = React.useState<string>('');
   const [extractedResults, setExtractedResults] = React.useState<any[]>([]);
@@ -137,7 +138,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: A
         uploadedR2Urls.push(r2Url);
       }
 
-      // Step 2: Send accumulated OCR text to DeepSeek AI API
+      // Step 2: Send accumulated OCR text to DeepSeek AI API with isMultipleListings parameter
       setCurrentFileScanning('DeepSeek AI Parsing All Document Specs & Agent Contact Data...');
 
       const res = await fetch('/api/ai-extract-listing', {
@@ -145,7 +146,8 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: A
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           textContent: combinedTexts.join('\n\n'),
-          fileName: fileNames.join(', ')
+          fileName: fileNames.join(', '),
+          isMultipleListings
         })
       });
 
@@ -154,7 +156,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: A
       if (res.ok && data.status === 'SUCCESS' && data.data) {
         const results = Array.isArray(data.data) ? data.data : [data.data];
         
-        // Attach R2 cropped image URLs to extracted property objects
+        // Attach corresponding R2 cropped image URLs to each extracted property object
         const resultsWithR2Images = results.map((result: any, idx: number) => {
           const r2Image = uploadedR2Urls[idx] || uploadedR2Urls[0] || null;
           return {
@@ -177,28 +179,28 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: A
   const handleConfirmAddAll = () => {
     if (extractedResults.length === 0) return;
 
-    extractedResults.forEach(result => {
-      onAddExtractedStop({
-        original_input: result.address || 'Uploaded Listing Document',
-        normalized_address: result.address || '78 Shelter Rock Rd, Manhasset, NY 11030',
-        latitude: 40.7912,
-        longitude: -73.6954,
-        mls_number: result.mls_number,
-        list_price: typeof result.list_price === 'number' ? result.list_price : parseInt(result.list_price || '0'),
-        beds: typeof result.beds === 'number' ? result.beds : parseInt(result.beds || '0'),
-        baths: typeof result.baths === 'number' ? result.baths : parseFloat(result.baths || '0'),
-        sqft: typeof result.sqft === 'number' ? result.sqft : parseInt(result.sqft || '0'),
-        image_url: result.image_url,
-        has_open_house: result.has_open_house || false,
-        open_house_start: result.open_house_start,
-        open_house_end: result.open_house_end,
-        listing_agent_name: result.listing_agent_name,
-        listing_agent_phone: result.listing_agent_phone,
-        listing_agent_email: result.listing_agent_email,
-        listing_brokerage: result.listing_brokerage,
-        agent_notes: result.agent_notes
-      });
-    });
+    const formattedList: Partial<TourStop>[] = extractedResults.map(result => ({
+      original_input: result.address || 'Uploaded Listing Document',
+      normalized_address: result.address || '78 Shelter Rock Rd, Manhasset, NY 11030',
+      latitude: 40.7912,
+      longitude: -73.6954,
+      mls_number: result.mls_number,
+      list_price: typeof result.list_price === 'number' ? result.list_price : parseInt(result.list_price || '0'),
+      beds: typeof result.beds === 'number' ? result.beds : parseInt(result.beds || '0'),
+      baths: typeof result.baths === 'number' ? result.baths : parseFloat(result.baths || '0'),
+      sqft: typeof result.sqft === 'number' ? result.sqft : parseInt(result.sqft || '0'),
+      image_url: result.image_url,
+      has_open_house: result.has_open_house || false,
+      open_house_start: result.open_house_start,
+      open_house_end: result.open_house_end,
+      listing_agent_name: result.listing_agent_name,
+      listing_agent_phone: result.listing_agent_phone,
+      listing_agent_email: result.listing_agent_email,
+      listing_brokerage: result.listing_brokerage,
+      agent_notes: result.agent_notes
+    }));
+
+    onAddExtractedStops(formattedList);
 
     // Reset upload scanner state so user can scan more listings continuously
     setFiles([]);
@@ -258,13 +260,32 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: A
 
           {/* File Drag & Drop Dropzone */}
           {extractedResults.length === 0 && (
-            <div className="border-2 border-dashed border-slate-800 hover:border-purple-500/50 rounded-2xl p-6 text-center space-y-3 bg-slate-900/50 transition-colors">
+            <div className="border-2 border-dashed border-slate-800 hover:border-purple-500/50 rounded-2xl p-5 text-center space-y-4 bg-slate-900/50 transition-colors">
               <div className="w-12 h-12 rounded-full bg-purple-600/10 border border-purple-500/30 text-purple-400 mx-auto flex items-center justify-center">
                 <UploadCloud className="w-6 h-6" />
               </div>
               <div className="space-y-1">
                 <p className="font-bold text-white">Upload Listing Flyers, MLS Sheets, or Agent PDFs</p>
                 <p className="text-[11px] text-slate-400">Supports multi-file upload. Property photos are cropped & stored in Cloudflare R2 (30-day retention)</p>
+              </div>
+
+              {/* Multiple Listings Checkbox & Description */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-purple-500/30 text-left space-y-1">
+                <label className="flex items-center gap-2 font-bold text-white cursor-pointer text-xs">
+                  <input
+                    type="checkbox"
+                    checked={isMultipleListings}
+                    onChange={e => setIsMultipleListings(e.target.checked)}
+                    className="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-purple-500/50 w-4 h-4"
+                  />
+                  <span className="flex items-center gap-1 text-purple-300">
+                    <CheckSquare className="w-3.5 h-3.5 text-purple-400" />
+                    Multiple Listings (1 property per image / file)
+                  </span>
+                </label>
+                <p className="text-[11px] text-slate-400 pl-6 leading-normal">
+                  Check this if each uploaded image or PDF is a separate property listing. If unchecked, all uploaded files/pages will be treated as belonging to a single multi-page property brochure.
+                </p>
               </div>
 
               <input
@@ -328,7 +349,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: A
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>Analyze {files.length} Document{files.length > 1 ? 's' : ''} & Save Photo to R2</span>
+                        <span>Analyze {files.length} Document{files.length > 1 ? 's' : ''} {isMultipleListings ? '(Multiple Listings Mode)' : ''}</span>
                       </>
                     )}
                   </button>
