@@ -1,9 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Tour, TourStop } from '@/types/tour';
 import StatusBadge from './StatusBadge';
-import { Navigation, ExternalLink, Trash2, MapPin, Home, Bed, Bath, Maximize2, DollarSign, Clock, Sparkles } from 'lucide-react';
+import { Navigation, ExternalLink, Trash2, MapPin, Layers, Map as MapIcon, Home, Bed, Bath, Maximize2, Clock } from 'lucide-react';
+
+// Dynamically import Leaflet InteractiveMap without SSR
+const InteractiveMap = dynamic(() => import('./InteractiveMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full min-h-[350px] bg-slate-950 flex items-center justify-center text-indigo-400 font-bold text-xs gap-2">
+      <div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+      <span>Loading Interactive Pin Map...</span>
+    </div>
+  )
+});
 
 interface MapViewProps {
   tour: Tour;
@@ -22,6 +34,7 @@ export default function MapView({
   onHoverStop,
   onRemoveStop
 }: MapViewProps) {
+  const [mapMode, setMapMode] = useState<'INTERACTIVE_PINS' | 'GOOGLE_DIRECTIONS'>('INTERACTIVE_PINS');
   const stops = tour.stops;
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
 
@@ -31,17 +44,13 @@ export default function MapView({
     ? stops.slice(1, stops.length - 1).map(s => encodeURIComponent(s.normalized_address)).join('|')
     : '';
 
-  // Google Maps Embed API Directions URL starting directly at Stop #1
   const googleMapEmbedUrl = apiKey && !apiKey.includes('your_google_maps_key')
     ? `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&mode=driving`
     : `https://maps.google.com/maps?saddr=${origin}&daddr=${stops.length > 1 ? stops.slice(1).map(s => encodeURIComponent(s.normalized_address)).join('+to:') : origin}&output=embed`;
 
-  // Direct Google Maps Directions link for one-click navigation
   const externalDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=driving`;
 
-  // Active or Hovered Stop for Map Pinpoint Popup
   const activePinStop = stops.find(s => s.id === (hoveredStopId || selectedStopId)) || (stops.length > 0 ? stops[0] : null);
-  const isHoverActive = Boolean(hoveredStopId && stops.some(s => s.id === hoveredStopId));
 
   const formatPrice = (price?: number) => {
     if (!price) return null;
@@ -56,30 +65,54 @@ export default function MapView({
           <Navigation className="w-4 h-4 text-indigo-400" />
           <div>
             <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-              <span>Google Maps Route Navigation</span>
-              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[9px]">Live Traffic</span>
+              <span>Interactive Property Tour Map</span>
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[9px]">Live Hover Sync</span>
             </h4>
             <p className="text-[10px] text-slate-400">{stops.length} Property Showing Stops · Long Island</p>
           </div>
         </div>
 
-        {stops.length > 0 && (
-          <a
-            href={externalDirectionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition-colors"
-          >
-            <ExternalLink className="w-3 h-3" />
-            <span>Open in Google Maps App</span>
-          </a>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Toggle Map Mode */}
+          <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] font-bold">
+            <button
+              onClick={() => setMapMode('INTERACTIVE_PINS')}
+              className={`px-2 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer ${
+                mapMode === 'INTERACTIVE_PINS' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <MapIcon className="w-3 h-3" />
+              <span>Interactive Pins</span>
+            </button>
+            <button
+              onClick={() => setMapMode('GOOGLE_DIRECTIONS')}
+              className={`px-2 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer ${
+                mapMode === 'GOOGLE_DIRECTIONS' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3 h-3" />
+              <span>Google Directions</span>
+            </button>
+          </div>
+
+          {stops.length > 0 && (
+            <a
+              href={externalDirectionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition-colors shrink-0"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>Open Google Maps</span>
+            </a>
+          )}
+        </div>
       </div>
 
-      {/* Interactive Map Pinpoints Quick Selector Strip */}
+      {/* Map Pins Selector Bar */}
       <div className="px-3 py-2 bg-slate-900/80 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto z-10">
         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-          <MapPin className="w-3 h-3 text-indigo-400" /> Map Pins:
+          <MapPin className="w-3 h-3 text-indigo-400" /> Tour Stops:
         </span>
         {stops.map((stop, idx) => {
           const isSelected = stop.id === selectedStopId;
@@ -92,7 +125,7 @@ export default function MapView({
               onMouseLeave={() => onHoverStop?.(undefined)}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer border ${
                 isHovered
-                  ? 'bg-indigo-500 text-white border-indigo-400 ring-2 ring-indigo-400/50 shadow-lg scale-105'
+                  ? 'bg-purple-600 text-white border-purple-300 ring-2 ring-purple-400/80 shadow-lg scale-105'
                   : isSelected
                     ? 'bg-indigo-600 text-white border-indigo-500 ring-1 ring-indigo-500/50'
                     : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800 hover:text-white'
@@ -105,9 +138,17 @@ export default function MapView({
         })}
       </div>
 
-      {/* Real Google Maps Embed / Interactive Iframe with Floating Pinpoint Popup Overlay */}
+      {/* Main Map Body */}
       <div className="relative flex-1 w-full h-full min-h-[350px] bg-slate-950">
-        {stops.length > 0 ? (
+        {mapMode === 'INTERACTIVE_PINS' ? (
+          <InteractiveMap
+            stops={stops}
+            selectedStopId={selectedStopId}
+            hoveredStopId={hoveredStopId}
+            onSelectStop={onSelectStop}
+            onHoverStop={onHoverStop}
+          />
+        ) : (
           <iframe
             title="Google Maps Driving Route"
             width="100%"
@@ -118,83 +159,10 @@ export default function MapView({
             src={googleMapEmbedUrl}
             className="w-full h-full filter saturate-[1.1]"
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs">
-            No property listings in tour itinerary yet.
-          </div>
-        )}
-
-        {/* Floating Map Pinpoint Info Popup (Triggered on Hover or Selection) */}
-        {activePinStop && (
-          <div className={`absolute top-4 left-4 right-4 pointer-events-auto transition-all duration-300 transform z-20 ${
-            isHoverActive ? 'scale-100 opacity-100' : 'scale-98 opacity-95'
-          }`}>
-            <div className="p-3.5 bg-slate-900/95 backdrop-blur-xl border border-indigo-500/50 rounded-2xl shadow-2xl ring-1 ring-indigo-500/30 flex items-start gap-3.5">
-              {/* Photo Thumbnail */}
-              <div className="relative w-24 h-20 rounded-xl overflow-hidden bg-slate-950 shrink-0 border border-slate-700/80 shadow-md">
-                {activePinStop.image_url ? (
-                  <img
-                    src={activePinStop.image_url}
-                    alt={activePinStop.normalized_address}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-600">
-                    <Home className="w-6 h-6" />
-                  </div>
-                )}
-                {/* Stop Order Badge overlay */}
-                <div className="absolute top-1 left-1 px-2 py-0.5 rounded-md bg-indigo-600/90 backdrop-blur text-white text-[10px] font-black shadow">
-                  #{activePinStop.planned_order}
-                </div>
-              </div>
-
-              {/* Details & Specs */}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h4 className="text-xs font-black text-white leading-tight truncate">
-                    {activePinStop.normalized_address}
-                  </h4>
-                  {formatPrice(activePinStop.list_price) && (
-                    <span className="text-xs font-black text-emerald-400 shrink-0 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
-                      {formatPrice(activePinStop.list_price)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Specs: Beds, Baths, Sqft */}
-                <div className="flex items-center gap-3 text-[11px] font-medium text-slate-300">
-                  {typeof activePinStop.beds === 'number' && (
-                    <span className="flex items-center gap-1">
-                      <Bed className="w-3 h-3 text-indigo-400" /> {activePinStop.beds} Beds
-                    </span>
-                  )}
-                  {typeof activePinStop.baths === 'number' && (
-                    <span className="flex items-center gap-1">
-                      <Bath className="w-3 h-3 text-indigo-400" /> {activePinStop.baths} Baths
-                    </span>
-                  )}
-                  {activePinStop.sqft && (
-                    <span className="flex items-center gap-1 text-slate-400">
-                      <Maximize2 className="w-3 h-3 text-slate-500" /> {activePinStop.sqft.toLocaleString()} sqft
-                    </span>
-                  )}
-                </div>
-
-                {/* Scheduled Time & Status */}
-                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
-                  <span className="flex items-center gap-1 font-bold text-indigo-300">
-                    <Clock className="w-3 h-3 text-indigo-400" /> {activePinStop.planned_arrival} – {activePinStop.planned_departure}
-                  </span>
-                  <StatusBadge status={activePinStop.appointment_status} size="sm" />
-                </div>
-              </div>
-            </div>
-          </div>
         )}
       </div>
 
-      {/* Selected Stop Action Bar */}
+      {/* Bottom Quick Detail Bar */}
       {activePinStop && (
         <div className="p-3 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex items-center justify-between z-10">
           <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -202,11 +170,18 @@ export default function MapView({
               #{activePinStop.planned_order}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-white truncate">
-                {activePinStop.normalized_address}
+              <div className="text-xs font-bold text-white truncate flex items-center gap-2">
+                <span>{activePinStop.normalized_address}</span>
+                {formatPrice(activePinStop.list_price) && (
+                  <span className="text-emerald-400 font-extrabold text-[11px]">
+                    {formatPrice(activePinStop.list_price)}
+                  </span>
+                )}
               </div>
-              <div className="text-[10px] text-slate-400">
-                Arrival: <strong className="text-indigo-300">{activePinStop.planned_arrival}</strong> · Visit: {activePinStop.visit_minutes}m
+              <div className="text-[10px] text-slate-400 flex items-center gap-3">
+                <span>Arrival: <strong className="text-indigo-300">{activePinStop.planned_arrival}</strong></span>
+                <span>Visit: {activePinStop.visit_minutes}m</span>
+                {activePinStop.beds && <span>{activePinStop.beds} Bed / {activePinStop.baths} Bath</span>}
               </div>
             </div>
           </div>
