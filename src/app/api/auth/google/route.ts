@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { id_token, google_id, email, full_name } = await request.json();
@@ -11,7 +13,6 @@ export async function POST(request: Request) {
     let targetEmail = email ? email.toLowerCase() : 'ianyeung30@gmail.com';
     let targetName = full_name || 'Ian Yeung (Google)';
 
-    // Verify Google ID token against Google OAuth API if id_token is provided
     if (id_token && clientId && !clientId.includes('your_google_client_id')) {
       try {
         const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${id_token}`);
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
           targetName = googleUserData.name || targetName;
         }
       } catch (e) {
-        // Fallback if network token verification is offline
+        // Fallback if offline
       }
     }
 

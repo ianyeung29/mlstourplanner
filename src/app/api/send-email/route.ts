@@ -1,56 +1,36 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+export const dynamic = 'force-dynamic';
+
+const resend = new Resend(process.env.RESEND_API_KEY || 're_iezA6ZmN_2mbafy1n9nxmNFTe35bVezLp');
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { to, subject, html, text } = body;
+    const { to, subject, html, text } = await request.json();
 
-    const apiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-
-    if (!apiKey) {
+    if (!to || (!html && !text)) {
       return NextResponse.json(
-        {
-          error: 'RESEND_API_KEY is not configured in .env.local',
-          details: 'Please add your RESEND_API_KEY=re_... in .env.local file.'
-        },
+        { error: 'Recipient "to" and email content are required' },
         { status: 400 }
       );
     }
 
-    if (!to || !subject || (!html && !text)) {
-      return NextResponse.json(
-        { error: 'Missing required parameters (to, subject, html/text).' },
-        { status: 400 }
-      );
-    }
-
-    const resend = new Resend(apiKey);
+    const recipientList = Array.isArray(to) ? to : [to];
 
     const data = await resend.emails.send({
-      from: `MLS Tour Planner <${fromEmail}>`,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
-      text
+      from: FROM_EMAIL,
+      to: recipientList,
+      subject: subject || 'Showing Itinerary Schedule',
+      html: html || undefined,
+      text: text || undefined
     });
 
-    if (data.error) {
-      return NextResponse.json(
-        { error: data.error.message || 'Failed to send email via Resend' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      id: data.data?.id,
-      message: 'Email sent successfully via Resend!'
-    });
+    return NextResponse.json({ success: true, data });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error.message || 'Failed to dispatch email via Resend API' },
       { status: 500 }
     );
   }

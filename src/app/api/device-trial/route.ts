@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const MAX_FREE_TRIAL_TOURS = 3;
 
 export async function POST(request: Request) {
@@ -12,7 +14,6 @@ export async function POST(request: Request) {
     }
 
     if (!process.env.DATABASE_URL) {
-      // Memory fallback if DB URL is pending configuration
       return NextResponse.json({
         allowed: true,
         trialToursUsed: 1,

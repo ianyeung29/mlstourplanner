@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     if (!process.env.DATABASE_URL) {
@@ -21,7 +23,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, client_display_name, client_email, tour_date, earliest_start, latest_finish, start_address, stops } = body;
+    const { name, client_display_name, client_email, tour_date, earliest_start, latest_finish, start_address, stops, agent_name, agent_email, agent_phone, agent_brokerage } = body;
 
     if (!process.env.DATABASE_URL) {
       return NextResponse.json({ status: 'SUCCESS', id: `tour_${Date.now()}` });
@@ -36,6 +38,10 @@ export async function POST(request: Request) {
         earliest_start: earliest_start || '09:30',
         latest_finish: latest_finish || '16:00',
         start_address: start_address || '100 Northern Blvd, Great Neck, NY 11021',
+        agent_name: agent_name || 'Ian Yeung',
+        agent_email: agent_email || 'ianyeung30@gmail.com',
+        agent_phone: agent_phone || '(516) 555-8820',
+        agent_brokerage: agent_brokerage || 'Side Luxury Real Estate',
         stops: {
           create: (stops || []).map((s: any, idx: number) => ({
             original_input: s.original_input || s.normalized_address,

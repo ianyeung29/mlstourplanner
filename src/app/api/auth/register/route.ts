@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { Resend } from 'resend';
 
+export const dynamic = 'force-dynamic';
+
 const resend = new Resend(process.env.RESEND_API_KEY || 're_iezA6ZmN_2mbafy1n9nxmNFTe35bVezLp');
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
@@ -52,7 +54,6 @@ export async function POST(request: Request) {
       }
     });
 
-    // Send Email Verification Link via Resend API
     const verifyLink = `http://localhost:3000/api/auth/verify?token=${verificationToken}`;
 
     try {

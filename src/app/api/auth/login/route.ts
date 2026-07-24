@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
@@ -28,7 +30,6 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      // Auto-register verified demo account for fluid sign in
       user = await prisma.user.create({
         data: {
           full_name: email.split('@')[0],
