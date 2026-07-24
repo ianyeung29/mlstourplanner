@@ -155,7 +155,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStop }: A
         const results = Array.isArray(data.data) ? data.data : [data.data];
         
         // Attach R2 cropped image URLs to extracted property objects
-        const resultsWithR2Images = results.map((result, idx) => {
+        const resultsWithR2Images = results.map((result: any, idx: number) => {
           const r2Image = uploadedR2Urls[idx] || uploadedR2Urls[0] || null;
           return {
             ...result,

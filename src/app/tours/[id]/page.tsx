@@ -30,10 +30,7 @@ import {
   X,
   Save,
   Sparkles,
-  Loader2,
-  Bug,
-  Code2,
-  Shuffle
+  Loader2
 } from 'lucide-react';
 
 export default function TourWorkspacePage() {
@@ -47,8 +44,6 @@ export default function TourWorkspacePage() {
   const [warnings, setWarnings] = React.useState<string[]>([]);
   const [infeasibleReasons, setInfeasibleReasons] = React.useState<string[]>([]);
   const [isOptimizing, setIsOptimizing] = React.useState(false);
-  const [routeDebug, setRouteDebug] = React.useState<any | null>(null);
-  const [showDebugPanel, setShowDebugPanel] = React.useState(false);
 
   // Edit Tour Modal State
   const [isEditTourOpen, setIsEditTourOpen] = React.useState(false);
@@ -205,12 +200,11 @@ export default function TourWorkspacePage() {
     };
 
     const updatedStops = [...tour.stops, newStop];
-    const { tour: reorderedTour, debug } = await reorderStopsWithGoogle({ ...tour, stops: updatedStops });
+    const { tour: reorderedTour } = await reorderStopsWithGoogle({ ...tour, stops: updatedStops });
     const { updatedTour, result } = optimizeTourSchedule(reorderedTour);
 
     saveTour(updatedTour);
     setTour(updatedTour);
-    setRouteDebug(debug || null);
     setWarnings(result.warnings);
     setInfeasibleReasons(result.infeasibleReasons || []);
     setSelectedStopId(newStop.id);
@@ -253,12 +247,11 @@ export default function TourWorkspacePage() {
     };
 
     const updatedStops = [...tour.stops, newStop];
-    const { tour: reorderedTour, debug } = await reorderStopsWithGoogle({ ...tour, stops: updatedStops });
+    const { tour: reorderedTour } = await reorderStopsWithGoogle({ ...tour, stops: updatedStops });
     const { updatedTour, result } = optimizeTourSchedule(reorderedTour);
 
     saveTour(updatedTour);
     setTour(updatedTour);
-    setRouteDebug(debug || null);
     setWarnings(result.warnings);
     setInfeasibleReasons(result.infeasibleReasons || []);
     setSelectedStopId(newStop.id);
@@ -327,24 +320,13 @@ export default function TourWorkspacePage() {
     setInfeasibleReasons(result.infeasibleReasons || []);
   };
 
-  const handleShuffleStops = () => {
-    const shuffledStops = [...tour.stops].sort(() => Math.random() - 0.5);
-    shuffledStops.forEach((s, idx) => { s.planned_order = idx + 1; });
-    const updated = { ...tour, stops: shuffledStops };
-    const { updatedTour } = optimizeTourSchedule(updated);
-    saveTour(updatedTour);
-    setTour(updatedTour);
-  };
-
   const handleReoptimize = async () => {
     setIsOptimizing(true);
     try {
-      const { tour: reordered, debug } = await reorderStopsWithGoogle(tour);
+      const { tour: reordered } = await reorderStopsWithGoogle(tour);
       const { updatedTour, result } = optimizeTourSchedule(reordered);
       saveTour(updatedTour);
       setTour(updatedTour);
-      setRouteDebug(debug || null);
-      setShowDebugPanel(true);
       setWarnings(result.warnings);
       setInfeasibleReasons(result.infeasibleReasons || []);
     } finally {
@@ -399,14 +381,6 @@ export default function TourWorkspacePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setShowDebugPanel(!showDebugPanel)}
-              className="px-2.5 py-1.5 rounded-lg bg-purple-900/40 hover:bg-purple-900 text-purple-300 border border-purple-500/40 text-xs font-bold flex items-center gap-1 transition-colors"
-            >
-              <Bug className="w-3.5 h-3.5 text-purple-400" />
-              <span>{showDebugPanel ? 'Hide Route Debug' : 'Route Debug'}</span>
-            </button>
-
             <button
               onClick={() => setIsClientEmailOpen(true)}
               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-colors"
@@ -486,53 +460,6 @@ export default function TourWorkspacePage() {
             >
               {isAddingMls ? 'Fetching...' : 'Fetch & Add'}
             </button>
-          </div>
-        )}
-
-        {/* Live Route Optimizer Debug Console */}
-        {showDebugPanel && (
-          <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 space-y-3 text-[11px] animate-fadeIn">
-            <div className="flex items-center justify-between text-purple-300 font-bold border-b border-slate-800 pb-2">
-              <span className="flex items-center gap-1.5 text-xs">
-                <Code2 className="w-4 h-4 text-purple-400" />
-                Live Route Optimizer Debug Console
-              </span>
-              <button
-                onClick={handleShuffleStops}
-                className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-[10px] flex items-center gap-1"
-              >
-                <Shuffle className="w-3 h-3 text-amber-400" />
-                <span>Deliberately Shuffle Order (Test Optimization)</span>
-              </button>
-            </div>
-
-            {routeDebug ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${routeDebug.apiKeyConfigured ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>
-                    Google API Key Configured: {routeDebug.apiKeyConfigured ? 'YES' : 'NO (Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to .env.local)'}
-                  </span>
-                  <span className="text-slate-400">Provider: <strong className="text-white">{routeDebug.provider}</strong></span>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="text-slate-300 font-bold">Candidates Evaluated: {routeDebug.candidatesEvaluated}</div>
-                  <div className="text-slate-400">Original Sequence:</div>
-                  <pre className="p-2 rounded bg-slate-950 text-slate-300 font-mono text-[10px] whitespace-pre-wrap border border-slate-800">
-                    {JSON.stringify(routeDebug.originalSequence, null, 2)}
-                  </pre>
-
-                  <div className="text-slate-400">Optimized Best Sequence:</div>
-                  <pre className="p-2 rounded bg-slate-950 text-emerald-300 font-mono text-[10px] whitespace-pre-wrap border border-slate-800">
-                    {JSON.stringify(routeDebug.reorderedSequence, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            ) : (
-              <div className="text-slate-400 italic p-2 bg-slate-950 rounded border border-slate-800">
-                Click <strong>"Re-optimize"</strong> to run route optimization and generate live debug logs.
-              </div>
-            )}
           </div>
         )}
       </div>
