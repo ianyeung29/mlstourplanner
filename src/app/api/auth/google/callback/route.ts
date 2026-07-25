@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+  const requestUrl = new URL(req.url);
+  const searchParams = requestUrl.searchParams;
   const code = searchParams.get('code');
   const error = searchParams.get('error');
 
-  const appOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  // Dynamically extract origin from current incoming request (e.g. https://www.mlstourplanner.com or http://localhost:3000)
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
+  const redirectUri = `${appOrigin}/api/auth/google/callback`;
 
   if (error || !code) {
     return NextResponse.redirect(`${appOrigin}/?auth_error=${encodeURIComponent(error || 'no_code')}`);
@@ -13,7 +16,6 @@ export async function GET(req: Request) {
 
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = `${appOrigin}/api/auth/google/callback`;
 
   try {
     // 1. Exchange code for Google ID token and access token

@@ -3,11 +3,14 @@ import { NextResponse } from 'next/server';
 export async function GET(req: Request) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
 
-  const { searchParams } = new URL(req.url);
-  const origin = searchParams.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const requestUrl = new URL(req.url);
+  const searchParams = requestUrl.searchParams;
+  
+  // Dynamically extract the exact origin (e.g. https://www.mlstourplanner.com or http://localhost:3000)
+  const origin = searchParams.get('origin') || requestUrl.origin;
   const redirectUri = `${origin}/api/auth/google/callback`;
 
-  // If no official Google Client ID is configured yet, fallback gracefully or inform user
+  // If no official Google Client ID is configured yet, fallback gracefully
   if (!googleClientId || googleClientId.includes('your_google_client_id')) {
     return NextResponse.redirect(`${origin}/?auth_error=google_credentials_missing`);
   }
