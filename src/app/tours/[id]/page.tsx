@@ -646,8 +646,8 @@ export default function TourWorkspacePage() {
           />
         </div>
 
-        {/* Right Column (5 cols): Sticky Widescreen Map */}
-        <div className={`lg:col-span-5 sticky top-14 h-[calc(100vh-5rem)] min-h-[450px] ${activeTab === 'TIMELINE' ? 'hidden lg:block' : 'block'}`}>
+        {/* Right Column (5 cols): Sticky Widescreen Map on Desktop, Full-Height View on Mobile */}
+        <div className={`lg:col-span-5 lg:sticky lg:top-14 h-[calc(100vh-8rem)] lg:h-[calc(100vh-5rem)] min-h-[400px] ${activeTab === 'TIMELINE' ? 'hidden lg:block' : 'block'}`}>
           <MapView
             tour={tour}
             selectedStopId={selectedStopId}
