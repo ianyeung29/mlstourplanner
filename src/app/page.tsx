@@ -42,15 +42,22 @@ function LandingPageContent() {
   };
 
   const handleStripeCheckout = async () => {
+    const user = getUserProfile();
+
+    if (!user || !user.email || !user.id) {
+      alert('Please Sign In or Create an Account first to unlock PRO Unlimited.');
+      triggerAuthModal();
+      return;
+    }
+
     setIsRedirectingCheckout(true);
     try {
-      const user = getUserProfile();
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userEmail: user?.email || '',
-          userId: user?.id || '',
+          userEmail: user.email,
+          userId: user.id,
           origin: window.location.origin
         })
       });
