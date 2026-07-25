@@ -21,10 +21,13 @@ import {
   LogIn
 } from 'lucide-react';
 import { triggerAuthModal } from '@/services/authModal';
+import { getUserProfile } from '@/services/storage';
+import { Loader2 } from 'lucide-react';
 
 function LandingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isRedirectingCheckout, setIsRedirectingCheckout] = React.useState(false);
 
   React.useEffect(() => {
     if (searchParams.get('auth') === 'required' || searchParams.get('auth') === 'open') {
@@ -36,6 +39,32 @@ function LandingPageContent() {
     e.preventDefault();
     e.stopPropagation();
     triggerAuthModal();
+  };
+
+  const handleStripeCheckout = async () => {
+    setIsRedirectingCheckout(true);
+    try {
+      const user = getUserProfile();
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userEmail: user?.email || '',
+          userId: user?.id || '',
+          origin: window.location.origin
+        })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Failed to start Stripe checkout session.');
+        setIsRedirectingCheckout(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Network error connecting to Stripe.');
+      setIsRedirectingCheckout(false);
+    }
   };
 
   return (
@@ -184,10 +213,12 @@ function LandingPageContent() {
 
             <button
               type="button"
-              onClick={handleOpenAuth}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-black text-xs shadow-lg transition-transform active:scale-95 mt-4 cursor-pointer"
+              disabled={isRedirectingCheckout}
+              onClick={handleStripeCheckout}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-black text-xs shadow-lg transition-transform active:scale-95 mt-4 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              Sign In & Unlock PRO ($14.99/mo Special Promo)
+              {isRedirectingCheckout && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{isRedirectingCheckout ? 'Redirecting to Stripe...' : 'Unlock PRO ($14.99/mo Special Promo)'}</span>
             </button>
           </div>
         </div>
