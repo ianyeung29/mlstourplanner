@@ -57,10 +57,32 @@ export default function DashboardPage() {
     loadDashboard();
   };
 
-  const handleUpgrade = () => {
-    upgradeToPro();
-    loadDashboard();
-    setShowUpgradeModal(false);
+  const [isRedirectingCheckout, setIsRedirectingCheckout] = React.useState(false);
+
+  const handleUpgrade = async () => {
+    setIsRedirectingCheckout(true);
+    try {
+      const user = getUserProfile();
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userEmail: user?.email || '',
+          userId: user?.id || '',
+          origin: window.location.origin
+        })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Failed to start Stripe checkout session.');
+        setIsRedirectingCheckout(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Network error connecting to Stripe.');
+      setIsRedirectingCheckout(false);
+    }
   };
 
   const filteredTours = tours.filter(t => {
@@ -107,11 +129,12 @@ export default function DashboardPage() {
           <div className="flex items-center space-x-2">
             {!isPro && (
               <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 transition-all"
+                disabled={isRedirectingCheckout}
+                onClick={handleUpgrade}
+                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
               >
                 <Crown className="w-3.5 h-3.5" />
-                <span>Upgrade to PRO ($19/mo)</span>
+                <span>{isRedirectingCheckout ? 'Connecting to Stripe...' : 'Upgrade to PRO ($14.99/mo)'}</span>
               </button>
             )}
 
@@ -265,10 +288,11 @@ export default function DashboardPage() {
 
               <div className="pt-2 flex flex-col gap-2">
                 <button
+                  disabled={isRedirectingCheckout}
                   onClick={handleUpgrade}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg transition-transform active:scale-95"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg transition-transform active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
-                  Activate PRO Unlimited Access ($19/mo)
+                  {isRedirectingCheckout ? 'Connecting to Stripe Checkout...' : 'Activate PRO Unlimited ($14.99/mo Special Promo)'}
                 </button>
                 <button
                   onClick={() => setShowUpgradeModal(false)}
