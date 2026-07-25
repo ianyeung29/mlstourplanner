@@ -26,51 +26,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   if (!isOpen) return null;
 
-  const handleGoogleSignIn = async () => {
-    // If user entered a specific email, use it; otherwise prompt user
-    const targetEmail = email.trim();
-
-    if (!targetEmail) {
-      setErrorMsg('Please type your Gmail address in the email field below to sign in with Google.');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    try {
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          google_id: `g_${Date.now()}`,
-          email: targetEmail,
-          full_name: fullName.trim() || targetEmail.split('@')[0]
-        })
-      });
-
-      const data = await res.json();
-      if (data.success && data.user) {
-        saveUserProfile({
-          ...currentProfile,
-          id: data.user.id,
-          full_name: data.user.full_name,
-          email: data.user.email,
-          brokerage_name: data.user.brokerage_name || 'Luxury Real Estate',
-          subscription_tier: 'FREE_TRIAL',
-          is_verified: true
-        });
-        onClose();
-        router.push('/dashboard');
-      } else {
-        setErrorMsg(data.error || 'Google Authentication failed.');
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication error.');
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleSignIn = () => {
+    // Redirects to official Google OAuth 2.0 prompt=select_account screen
+    window.location.href = `/api/auth/google/redirect?origin=${encodeURIComponent(window.location.origin)}`;
   };
 
   const handleEmailAuthSubmit = async (e: React.FormEvent) => {
