@@ -141,6 +141,7 @@ export default function MapView({
       <div className="relative flex-1 w-full h-full min-h-[350px] bg-slate-950">
         {mapMode === 'GOOGLE_INTERACTIVE' ? (
           <GoogleInteractiveMap
+            key={stops.map(s => `${s.id}:${s.planned_order}`).join(',')}
             stops={stops}
             selectedStopId={selectedStopId}
             hoveredStopId={hoveredStopId}
@@ -149,6 +150,7 @@ export default function MapView({
           />
         ) : (
           <iframe
+            key={stops.map(s => `${s.id}:${s.planned_order}`).join(',')}
             title="Google Maps Driving Route"
             width="100%"
             height="100%"

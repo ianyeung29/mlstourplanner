@@ -14,6 +14,7 @@ import StatusBadge from '@/components/StatusBadge';
 import ConflictBanner from '@/components/ConflictBanner';
 import AppointmentModal from '@/components/AppointmentModal';
 import ClientEmailModal from '@/components/ClientEmailModal';
+import AgentAppointmentEmailModal from '@/components/AgentAppointmentEmailModal';
 import AiUploadModal from '@/components/AiUploadModal';
 import EditListingModal from '@/components/EditListingModal';
 import RouteOptionModal, { RouteOption } from '@/components/RouteOptionModal';
@@ -79,6 +80,15 @@ export default function TourWorkspacePage() {
 
   // Client Email Modal state
   const [isClientEmailOpen, setIsClientEmailOpen] = React.useState(false);
+
+  // Agent Appointment Email Modal state
+  const [activeAgentEmailStop, setActiveAgentEmailStop] = React.useState<TourStop | null>(null);
+  const [isAgentEmailOpen, setIsAgentEmailOpen] = React.useState(false);
+
+  const handleOpenAgentEmailModal = (stop: TourStop) => {
+    setActiveAgentEmailStop(stop);
+    setIsAgentEmailOpen(true);
+  };
 
   const loadWorkspace = React.useCallback(() => {
     const loaded = getTourById(tourId);
@@ -627,6 +637,7 @@ export default function TourWorkspacePage() {
               setActiveEditStop(stop);
               setIsEditListingOpen(true);
             }}
+            onOpenAgentEmailModal={handleOpenAgentEmailModal}
             onUpdateStopBuffers={handleUpdateStopBuffers}
             onUpdateStopPriority={handleUpdateStopPriority}
             onRemoveStop={handleRemoveStop}
@@ -775,6 +786,14 @@ export default function TourWorkspacePage() {
         tour={tour}
         isOpen={isClientEmailOpen}
         onClose={() => setIsClientEmailOpen(false)}
+      />
+
+      {/* Listing Agent Appointment Email Modal */}
+      <AgentAppointmentEmailModal
+        stop={activeAgentEmailStop}
+        tour={tour}
+        isOpen={isAgentEmailOpen}
+        onClose={() => setIsAgentEmailOpen(false)}
       />
     </div>
   );

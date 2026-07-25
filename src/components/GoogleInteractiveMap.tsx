@@ -48,6 +48,7 @@ export default function GoogleInteractiveMap({
   const googleMapObjRef = useRef<any>(null);
   const markersRef = useRef<{ [key: string]: any }>({});
   const infoWindowRef = useRef<any>(null);
+  const directionsRendererRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -68,7 +69,7 @@ export default function GoogleInteractiveMap({
     if (!existingScript) {
       existingScript = document.createElement('script');
       existingScript.id = scriptId;
-      existingScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      existingScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
       existingScript.async = true;
       existingScript.defer = true;
       existingScript.onload = () => setIsLoaded(true);
@@ -102,20 +103,25 @@ export default function GoogleInteractiveMap({
     googleMapObjRef.current = map;
   }, [isLoaded, stops]);
 
-  // Update Markers, Route Polyline, and Hover-Only Popups
+  // Update Markers, Real-Time Driving Directions, and Hover Popups whenever stops change
   useEffect(() => {
     if (!isLoaded || !googleMapObjRef.current) return;
 
     const google = (window as any).google;
     const map = googleMapObjRef.current;
 
-    // Clear existing markers & polyline
+    // Clear existing markers, polyline, and directions
     Object.values(markersRef.current).forEach((m: any) => m.setMap(null));
     markersRef.current = {};
 
     if (polylineRef.current) {
       polylineRef.current.setMap(null);
       polylineRef.current = null;
+    }
+
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setMap(null);
+      directionsRendererRef.current = null;
     }
 
     if (!stops || stops.length === 0) return;
@@ -172,16 +178,52 @@ export default function GoogleInteractiveMap({
       markersRef.current[stop.id] = marker;
     });
 
-    // Draw Polyline Route connecting all stops
-    if (pathCoords.length > 1) {
-      polylineRef.current = new google.maps.Polyline({
-        path: pathCoords,
-        geodesic: true,
-        strokeColor: '#6366f1',
-        strokeOpacity: 0.9,
-        strokeWeight: 4,
-        map
+    // Draw Turn-by-Turn Driving Directions via DirectionsService
+    if (stops.length > 1) {
+      const directionsService = new google.maps.DirectionsService();
+      const directionsRenderer = new google.maps.DirectionsRenderer({
+        map,
+        suppressMarkers: true, // Keep our custom SVG markers
+        polylineOptions: {
+          strokeColor: '#818cf8',
+          strokeOpacity: 0.9,
+          strokeWeight: 5
+        }
       });
+
+      directionsRendererRef.current = directionsRenderer;
+
+      const origin = { lat: stops[0].latitude, lng: stops[0].longitude };
+      const destination = { lat: stops[stops.length - 1].latitude, lng: stops[stops.length - 1].longitude };
+      const waypoints = stops.slice(1, stops.length - 1).map(s => ({
+        location: { lat: s.latitude, lng: s.longitude },
+        stopover: true
+      }));
+
+      directionsService.route(
+        {
+          origin,
+          destination,
+          waypoints,
+          travelMode: google.maps.TravelMode.DRIVING,
+          optimizeWaypoints: false
+        },
+        (result: any, status: any) => {
+          if (status === 'OK' && result) {
+            directionsRenderer.setDirections(result);
+          } else {
+            // Fallback to smooth geodesic Polyline if DirectionsService fails
+            polylineRef.current = new google.maps.Polyline({
+              path: pathCoords,
+              geodesic: true,
+              strokeColor: '#6366f1',
+              strokeOpacity: 0.9,
+              strokeWeight: 4,
+              map
+            });
+          }
+        }
+      );
     }
 
     if (stops.length > 0) {

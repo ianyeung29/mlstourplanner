@@ -25,7 +25,8 @@ import {
   Edit3,
   Code2,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Mail
 } from 'lucide-react';
 
 interface TimelineViewProps {
@@ -38,6 +39,7 @@ interface TimelineViewProps {
   onMoveStop: (index: number, direction: 'up' | 'down') => void;
   onOpenMessageModal: (stop: TourStop) => void;
   onOpenEditListingModal?: (stop: TourStop) => void;
+  onOpenAgentEmailModal?: (stop: TourStop) => void;
   onUpdateStopBuffers?: (stopId: string, visitMins: number, travelBufferMins: number) => void;
   onUpdateStopPriority?: (stopId: string, priority: 'MUST_SEE' | 'PREFERRED' | 'OPTIONAL') => void;
   onRemoveStop?: (stopId: string) => void;
@@ -69,6 +71,7 @@ export default function TimelineView({
   onMoveStop,
   onOpenMessageModal,
   onOpenEditListingModal,
+  onOpenAgentEmailModal,
   onUpdateStopBuffers,
   onUpdateStopPriority,
   onRemoveStop,
@@ -268,6 +271,21 @@ export default function TimelineView({
               >
                 {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
               </button>
+
+              {/* Email Agent Appointment Request Button */}
+              {onOpenAgentEmailModal && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenAgentEmailModal(stop);
+                  }}
+                  title="Email Listing Agent Appointment Request"
+                  className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 transition-colors flex items-center gap-1 text-[11px] font-bold"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Email Agent</span>
+                </button>
+              )}
 
               <button
                 onClick={(e) => {

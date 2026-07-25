@@ -89,13 +89,6 @@ export default function Header() {
                   href="/dashboard"
                   className="px-2 py-0.5 rounded hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-1 font-bold text-white"
                 >
-                  <Home className="w-3 h-3 text-indigo-400" />
-                  <span>Company</span>
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="px-2 py-0.5 rounded hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-1 font-bold text-white"
-                >
                   <LayoutDashboard className="w-3 h-3 text-emerald-400" />
                   <span>Workspace</span>
                 </Link>
