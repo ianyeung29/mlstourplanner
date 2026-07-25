@@ -104,11 +104,11 @@ function LandingPageContent() {
           </button>
         </div>
 
-        <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400 pt-2 font-medium">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-[11px] text-slate-400 pt-2 font-medium">
           <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Google OAuth & Email Login</span>
-          <span>•</span>
+          <span className="hidden sm:inline">•</span>
           <span className="flex items-center gap-1"><Smartphone className="w-3.5 h-3.5 text-blue-400" /> iOS, Android & Web Sync</span>
-          <span>•</span>
+          <span className="hidden sm:inline">•</span>
           <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-indigo-400" /> Neon Database Security</span>
         </div>
       </section>

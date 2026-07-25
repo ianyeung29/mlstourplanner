@@ -154,8 +154,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 4-Metric Bar in One Row */}
-        <div className="grid grid-cols-4 gap-3 text-xs">
+        {/* 4-Metric Bar (2x2 on Mobile, 1x4 on Desktop) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
             <div className="text-[11px] text-slate-400 font-medium">Total Tours</div>
             <div className="text-lg font-black text-white">{tours.length}</div>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Tour List Toolbar */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
           <div className="flex items-center space-x-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs font-semibold">
             {(['ALL', 'ACTIVE', 'CONFIRMED', 'COMPLETED'] as const).map(f => (
               <button

@@ -188,7 +188,7 @@ export default function ProfilePage() {
           <div className="space-y-3">
             <h2 className="font-bold text-white text-xs border-b border-slate-800 pb-1">Agent & Brokerage Credentials</h2>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-semibold text-slate-300">Agent Full Name</label>
                 <input
@@ -210,7 +210,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-semibold text-slate-300">Email Address</label>
                 <input
@@ -247,7 +247,7 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="font-semibold text-slate-300">Default Visit Time (mins)</label>
                 <input
