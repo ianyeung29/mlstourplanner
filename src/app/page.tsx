@@ -162,7 +162,16 @@ function LandingPageContent() {
                 <Crown className="w-3.5 h-3.5 text-amber-400" />
                 PRO Unlimited
               </span>
-              <div className="text-2xl font-black text-white">$19 <span className="text-xs font-normal text-slate-400">/ month</span></div>
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">$14.99</span>
+                  <span className="text-sm font-bold text-slate-400 line-through">$29.99</span>
+                  <span className="text-xs font-normal text-slate-400">/ month</span>
+                </div>
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold">
+                  🔥 Promotional Price: $14.99 / mo (Save 50%)
+                </div>
+              </div>
               <p className="text-xs text-slate-300">For active real estate agents & teams.</p>
 
               <div className="space-y-2 text-xs text-slate-200 pt-2 border-t border-slate-800">
@@ -178,7 +187,7 @@ function LandingPageContent() {
               onClick={handleOpenAuth}
               className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-black text-xs shadow-lg transition-transform active:scale-95 mt-4 cursor-pointer"
             >
-              Sign In & Unlock PRO ($19/mo)
+              Sign In & Unlock PRO ($14.99/mo Special Promo)
             </button>
           </div>
         </div>
