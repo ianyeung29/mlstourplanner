@@ -441,18 +441,18 @@ function NewTourWizardContent() {
 
           {/* Right Column: MLS Lookup & Property Inputs */}
           <div className="lg:col-span-7 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
               <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <Hash className="w-4 h-4 text-indigo-400" />
                 <span>2. MLS LISTINGS & CANDIDATE PROPERTIES</span>
               </h2>
 
               {/* 3 Input Mode Tabs: MLS Lookup, Raw Addresses, AI Scan Document */}
-              <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+              <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setInputMode('MLS')}
-                  className={`px-2.5 py-1 rounded font-semibold flex items-center gap-1 transition-colors ${
+                  className={`flex-1 sm:flex-none px-2.5 py-1 rounded font-semibold flex items-center justify-center gap-1 transition-colors ${
                     inputMode === 'MLS' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -462,12 +462,12 @@ function NewTourWizardContent() {
                 <button
                   type="button"
                   onClick={() => setInputMode('ADDRESS')}
-                  className={`px-2.5 py-1 rounded font-semibold flex items-center gap-1 transition-colors ${
+                  className={`flex-1 sm:flex-none px-2.5 py-1 rounded font-semibold flex items-center justify-center gap-1 transition-colors ${
                     inputMode === 'ADDRESS' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <MapPin className="w-3 h-3 text-emerald-400" />
-                  <span>Raw Addresses</span>
+                  <span>Addresses</span>
                 </button>
                 <button
                   type="button"
@@ -475,12 +475,12 @@ function NewTourWizardContent() {
                     setInputMode('AI');
                     setIsAiUploadOpen(true);
                   }}
-                  className={`px-2.5 py-1 rounded font-semibold flex items-center gap-1 transition-colors ${
+                  className={`flex-1 sm:flex-none px-2.5 py-1 rounded font-semibold flex items-center justify-center gap-1 transition-colors ${
                     inputMode === 'AI' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow' : 'text-purple-400 hover:text-white'
                   }`}
                 >
                   <Sparkles className="w-3 h-3 text-purple-300" />
-                  <span>+ AI Scan PDF / Image</span>
+                  <span>+ AI Scan</span>
                 </button>
               </div>
             </div>

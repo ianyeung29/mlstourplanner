@@ -145,11 +145,11 @@ export default function TimelineView({
                   : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            {/* Left: Listing Photo Thumbnail & Address */}
-            <div className="flex items-start space-x-3 min-w-0 flex-1">
+          <div className="space-y-2.5">
+            {/* Top Row: Thumbnail + Full Width Property Details */}
+            <div className="flex items-start space-x-3">
               {/* Primary Property Image Thumbnail */}
-              <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-slate-950 shrink-0 border border-slate-800">
+              <div className="relative w-16 h-14 rounded-lg overflow-hidden bg-slate-950 shrink-0 border border-slate-800">
                 {stop.image_url ? (
                   <img
                     src={stop.image_url}
@@ -161,18 +161,21 @@ export default function TimelineView({
                     No Image
                   </div>
                 )}
-                <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded bg-indigo-600/90 text-white font-bold text-[10px] flex items-center justify-center">
+                <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded bg-indigo-600/90 text-white font-bold text-[10px] flex items-center justify-center shadow">
                   #{idx + 1}
                 </span>
               </div>
 
-              <div className="space-y-1.5 min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <h4 className="text-xs font-extrabold text-white leading-snug break-words">
-                    {stop.normalized_address}
-                  </h4>
+              {/* Property Details */}
+              <div className="space-y-1 min-w-0 flex-1">
+                <h4 className="text-xs font-black text-white leading-snug break-words">
+                  {stop.normalized_address}
+                </h4>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   <StatusBadge status={stop.appointment_status} type="appointment" size="sm" />
 
+                  {/* Interactive Priority Selector Dropdown */}
                   <select
                     value={stop.priority || 'PREFERRED'}
                     onChange={(e) => onUpdateStopPriority?.(stop.id, e.target.value as any)}
@@ -198,7 +201,8 @@ export default function TimelineView({
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px]">
+                {/* Price & Bed/Bath Specs */}
+                <div className="flex flex-wrap items-center gap-2 text-[11px] pt-0.5">
                   {stop.list_price && (
                     <span className="font-extrabold text-emerald-400">
                       ${stop.list_price.toLocaleString()}
@@ -207,7 +211,7 @@ export default function TimelineView({
                   {(stop.beds || stop.baths) && (
                     <span className="text-slate-300 font-semibold flex items-center gap-1">
                       <Bed className="w-3 h-3 text-indigo-400" />
-                      {stop.beds || 0} Beds, {stop.baths || 0} Baths
+                      {stop.beds || 0} Bed, {stop.baths || 0} Bath
                     </span>
                   )}
                   {stop.sqft && (
@@ -217,108 +221,106 @@ export default function TimelineView({
                   )}
                 </div>
 
+                {/* Open House Auto-Arrangement Badge */}
                 {hasOpenHouse && (
                   isOpenHouseOnTourDate(stop, tour.tour_date) ? (
-                    <div className="flex items-start gap-1.5 p-2 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold shadow-sm leading-tight">
+                    <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold shadow-sm leading-tight mt-1">
                       <Home className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                       <span>Open House {stop.open_house_date ? `${stop.open_house_date} ` : ''}{stop.open_house_start || '11:00'} - {stop.open_house_end || '13:00'} (No Appointment Needed)</span>
                     </div>
                   ) : (
-                    <div className="flex items-start gap-1.5 p-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold shadow-sm leading-tight">
+                    <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold shadow-sm leading-tight mt-1">
                       <Home className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                       <span>Open House is on {stop.open_house_date || 'different day'} — Appointment Required</span>
                     </div>
                   )
                 )}
 
-                <div className="text-[11px] text-slate-400 truncate">
+                {/* Listing Agent Contact */}
+                <div className="text-[10px] text-slate-400 truncate pt-0.5">
                   Agent: <strong className="text-slate-200">{stop.listing_agent_name || 'N/A'}</strong> ({stop.listing_brokerage || 'N/A'})
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenEditListingModal?.(stop);
-                }}
-                title="Edit Property Info"
-                className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-colors"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleLock(stop.id);
-                }}
-                title={isLocked ? "Unlock Stop Order" : "Lock Stop Order"}
-                className={`p-1.5 rounded-lg border transition-colors ${
-                  isLocked
-                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                }`}
-              >
-                {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenAgentEmailModal?.(stop);
-                }}
-                title="Email Listing Agent Appointment Request"
-                className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-indigo-400 hover:text-white border border-slate-800 transition-colors"
-              >
-                <Mail className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenMessageModal(stop);
-                }}
-                title="Showing Assistant Notes"
-                className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-purple-400 hover:text-white border border-slate-800 transition-colors"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-              </button>
-
-              {onRemoveStop && (
+            {/* Dedicated Action Toolbar Row (Full width below property details) */}
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1 overflow-x-auto text-[11px]" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-1.5">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Remove #${idx + 1} ${stop.normalized_address} from tour?`)) {
-                      onRemoveStop(stop.id);
-                    }
-                  }}
-                  title="Remove Listing from Itinerary"
-                  className="p-1.5 rounded-lg bg-slate-950 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-800 transition-colors"
+                  type="button"
+                  onClick={() => onOpenEditListingModal?.(stop)}
+                  title="Edit Property Info"
+                  className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Edit3 className="w-3 h-3 text-indigo-400" />
+                  <span>Edit</span>
                 </button>
-              )}
 
-              <div className="flex flex-col">
                 <button
+                  type="button"
+                  onClick={() => onToggleLock(stop.id)}
+                  title={isLocked ? "Unlock Stop Order" : "Lock Stop Order"}
+                  className={`px-2 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                    isLocked
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  {isLocked ? <Lock className="w-3 h-3 text-amber-400" /> : <Unlock className="w-3 h-3" />}
+                  <span>{isLocked ? 'Locked' : 'Lock'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenAgentEmailModal?.(stop)}
+                  title="Email Listing Agent Appointment Request"
+                  className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-indigo-300 border border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
+                >
+                  <Mail className="w-3 h-3 text-indigo-400" />
+                  <span>Email</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenMessageModal(stop)}
+                  title="Showing Assistant Notes"
+                  className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-purple-300 border border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
+                >
+                  <MessageSquare className="w-3 h-3 text-purple-400" />
+                  <span>Notes</span>
+                </button>
+
+                {onRemoveStop && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Remove #${idx + 1} ${stop.normalized_address} from tour?`)) {
+                        onRemoveStop(stop.id);
+                      }
+                    }}
+                    title="Remove Listing from Itinerary"
+                    className="p-1 rounded-lg bg-slate-950 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-800 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Up / Down Reorder Buttons */}
+              <div className="flex items-center gap-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                <button
+                  type="button"
                   disabled={idx === 0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMoveStop(idx, 'up');
-                  }}
-                  className="p-0.5 text-slate-500 hover:text-white disabled:opacity-30"
+                  onClick={() => onMoveStop(idx, 'up')}
+                  className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  type="button"
                   disabled={idx === tour.stops.length - 1}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMoveStop(idx, 'down');
-                  }}
-                  className="p-0.5 text-slate-500 hover:text-white disabled:opacity-30"
+                  onClick={() => onMoveStop(idx, 'down')}
+                  className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
