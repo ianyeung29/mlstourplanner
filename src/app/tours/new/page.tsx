@@ -35,7 +35,8 @@ import {
   ChevronDown,
   ChevronUp,
   UserCheck,
-  Check
+  Check,
+  Edit2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -146,7 +147,7 @@ function NewTourWizardContent() {
 
     const combined = [...stops, ...newStops];
     setStops(combined);
-    buildAndOptimizeTour(combined);
+    buildAndOptimizeTour(combined, tourDate, earliestStart, latestFinish);
   };
 
   const handleProcessBulkInput = async () => {
@@ -202,10 +203,15 @@ function NewTourWizardContent() {
     }
 
     setLoading(false);
-    buildAndOptimizeTour(combinedStops);
+    buildAndOptimizeTour(combinedStops, tourDate, earliestStart, latestFinish);
   };
 
-  const buildAndOptimizeTour = (currentStops: Partial<TourStop>[]) => {
+  const buildAndOptimizeTour = (
+    currentStops: Partial<TourStop>[],
+    targetDate: string = tourDate,
+    targetStart: string = earliestStart,
+    targetFinish: string = latestFinish
+  ) => {
     const draftTour: Tour = {
       id: savedTour?.id || `tour_${Date.now()}`,
       name: name || 'Showing Tour',
@@ -213,10 +219,10 @@ function NewTourWizardContent() {
       client_email: clientEmail,
       client_id: selectedContactId,
       status: 'DRAFT',
-      tour_date: tourDate,
+      tour_date: targetDate,
       timezone: 'America/New_York',
-      earliest_start: earliestStart,
-      latest_finish: latestFinish,
+      earliest_start: targetStart,
+      latest_finish: targetFinish,
       start_input: startAddress,
       start_address: startAddress,
       start_latitude: 40.7865,
@@ -234,6 +240,15 @@ function NewTourWizardContent() {
     setSavedTour(persisted);
     setStops(persisted.stops);
     setStage(2);
+  };
+
+  const handleUpdateDateTime = (newDate: string, newStart: string, newFinish: string) => {
+    setTourDate(newDate);
+    setEarliestStart(newStart);
+    setLatestFinish(newFinish);
+    if (savedTour) {
+      buildAndOptimizeTour(savedTour.stops, newDate, newStart, newFinish);
+    }
   };
 
   const handleUpdateStopBuffers = (stopId: string, visitMins: number, travelBufferMins: number) => {
@@ -341,6 +356,44 @@ function NewTourWizardContent() {
               </div>
             </div>
 
+            {/* Tour Date & Time Controls Bar (Editable) */}
+            <div className="p-3 rounded-2xl bg-slate-950 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-indigo-300 shrink-0">
+                <Calendar className="w-4 h-4 text-indigo-400" />
+                <span>Tour Date & Time Window:</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                  <span className="text-[10px] text-slate-400">Date:</span>
+                  <input
+                    type="date"
+                    value={tourDate}
+                    onChange={e => handleUpdateDateTime(e.target.value, earliestStart, latestFinish)}
+                    className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
+                <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                  <span className="text-[10px] text-slate-400">Start:</span>
+                  <input
+                    type="time"
+                    value={earliestStart}
+                    onChange={e => handleUpdateDateTime(tourDate, e.target.value, latestFinish)}
+                    className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
+                <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                  <span className="text-[10px] text-slate-400">Finish:</span>
+                  <input
+                    type="time"
+                    value={latestFinish}
+                    onChange={e => handleUpdateDateTime(tourDate, earliestStart, e.target.value)}
+                    className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* AI Scan Document & Image Zone */}
             {inputMode === 'AI' && (
               <div className="space-y-4">
@@ -407,7 +460,7 @@ function NewTourWizardContent() {
             </button>
           </div>
 
-          {/* Optional Collapsible Settings Accordion (Date, Time, Starting Origin) */}
+          {/* Optional Collapsible Settings Accordion (Starting Origin) */}
           <div className="rounded-2xl bg-slate-900/60 border border-slate-800 overflow-hidden">
             <button
               type="button"
@@ -416,44 +469,14 @@ function NewTourWizardContent() {
             >
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-indigo-400" />
-                <span>⚙️ Adjust Tour Settings (Optional Overrides)</span>
+                <span>⚙️ Advanced Settings (Starting Origin Address)</span>
               </div>
               {showSettingsDrawer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
             {showSettingsDrawer && (
-              <div className="p-4 pt-0 border-t border-slate-800/60 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs animate-fadeIn">
+              <div className="p-4 pt-0 border-t border-slate-800/60 space-y-2 text-xs animate-fadeIn">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-400">Tour Date</label>
-                  <input
-                    type="date"
-                    value={tourDate}
-                    onChange={e => setTourDate(e.target.value)}
-                    className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-400">Earliest Start Time</label>
-                  <input
-                    type="time"
-                    value={earliestStart}
-                    onChange={e => setEarliestStart(e.target.value)}
-                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-400">Latest Finish Time</label>
-                  <input
-                    type="time"
-                    value={latestFinish}
-                    onChange={e => setLatestFinish(e.target.value)}
-                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none"
-                  />
-                </div>
-
-                <div className="md:col-span-3 space-y-1 pt-1">
                   <label className="text-[11px] font-bold text-slate-400">Starting Origin Address</label>
                   <input
                     type="text"
@@ -471,9 +494,9 @@ function NewTourWizardContent() {
       {/* STAGE 2: Instant Route & Plain-Language Conflicts */}
       {stage === 2 && savedTour && (
         <div className="space-y-4 animate-fadeIn">
-          {/* Instant Route Summary Header Banner */}
-          <div className="p-4 rounded-2xl bg-indigo-950/40 border-2 border-indigo-500/80 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
+          {/* Instant Route Summary Header Banner with Editable Date/Time */}
+          <div className="p-4 rounded-2xl bg-indigo-950/40 border-2 border-indigo-500/80 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="space-y-1.5">
               <div className="flex items-center space-x-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-[10px] uppercase border border-emerald-500/30">
                   Route Optimized
@@ -482,11 +505,41 @@ function NewTourWizardContent() {
                   Your {savedTour.stops.length}-Property Showing Tour is Ready
                 </h2>
               </div>
-              <div className="text-xs text-indigo-200 font-semibold flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{savedTour.earliest_start || '09:30 AM'} – {savedTour.latest_finish || '16:00 PM'}</span>
-                <span>•</span>
-                <span>{savedTour.stops.length} Stops Feasible</span>
+
+              {/* Editable Tour Date & Time Controls Bar */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-[10px] text-slate-400">Date:</span>
+                  <input
+                    type="date"
+                    value={tourDate}
+                    onChange={e => handleUpdateDateTime(e.target.value, earliestStart, latestFinish)}
+                    className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-[10px] text-slate-400">Start:</span>
+                  <input
+                    type="time"
+                    value={earliestStart}
+                    onChange={e => handleUpdateDateTime(tourDate, e.target.value, latestFinish)}
+                    className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-[10px] text-slate-400">Finish:</span>
+                  <input
+                    type="time"
+                    value={latestFinish}
+                    onChange={e => handleUpdateDateTime(tourDate, earliestStart, e.target.value)}
+                    className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
 
@@ -624,7 +677,7 @@ function NewTourWizardContent() {
               <button
                 type="button"
                 onClick={() => setStage(2)}
-                className="text-xs font-semibold text-slate-400 hover:text-white"
+                className="text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
               >
                 ← Back to Route View
               </button>
