@@ -8,6 +8,9 @@ import { lookupByMlsNumber, batchLookupMlsNumbers, MlsListingResult } from '@/se
 import { saveTour, getUserProfile, getContactsFromStorage } from '@/services/storage';
 import { optimizeTourSchedule } from '@/services/routeOptimizer';
 import AiUploadModal from '@/components/AiUploadModal';
+import EditListingModal from '@/components/EditListingModal';
+import AppointmentModal from '@/components/AppointmentModal';
+import AgentAppointmentEmailModal from '@/components/AgentAppointmentEmailModal';
 import TourStageBar from '@/components/TourStageBar';
 import TimelineView from '@/components/TimelineView';
 import MapView from '@/components/MapView';
@@ -57,6 +60,16 @@ function NewTourWizardContent() {
   const [showSettingsDrawer, setShowSettingsDrawer] = React.useState(false);
   const [isClientEmailOpen, setIsClientEmailOpen] = React.useState(false);
   const [copiedLink, setCopiedLink] = React.useState(false);
+
+  // Modals for Stop Action Toolbar (Edit, Lock, Email, Notes)
+  const [activeEditStop, setActiveEditStop] = React.useState<TourStop | null>(null);
+  const [isEditListingOpen, setIsEditListingOpen] = React.useState(false);
+
+  const [activeMessageStop, setActiveMessageStop] = React.useState<TourStop | null>(null);
+  const [isMessageModalOpen, setIsMessageModalOpen] = React.useState(false);
+
+  const [activeAgentEmailStop, setActiveAgentEmailStop] = React.useState<TourStop | null>(null);
+  const [isAgentEmailOpen, setIsAgentEmailOpen] = React.useState(false);
 
   // Form State (Defaulted automatically from agent saved preferences)
   const [name, setName] = React.useState('Showing Tour');
@@ -249,6 +262,57 @@ function NewTourWizardContent() {
     if (savedTour) {
       buildAndOptimizeTour(savedTour.stops, newDate, newStart, newFinish);
     }
+  };
+
+  const handleToggleLock = (stopId: string) => {
+    if (!savedTour) return;
+    const updatedStops = savedTour.stops.map(s => {
+      if (s.id === stopId) {
+        const isLocked = s.scheduling_mode === 'TIME_LOCKED' || s.appointment_status === 'CONFIRMED';
+        return {
+          ...s,
+          scheduling_mode: (isLocked ? 'FLEXIBLE' : 'TIME_LOCKED') as any
+        };
+      }
+      return s;
+    });
+    buildAndOptimizeTour(updatedStops);
+  };
+
+  const handleMoveStop = (index: number, direction: 'up' | 'down') => {
+    if (!savedTour) return;
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= savedTour.stops.length) return;
+
+    const copy = [...savedTour.stops];
+    const temp = copy[index];
+    copy[index] = copy[targetIdx];
+    copy[targetIdx] = temp;
+
+    copy.forEach((s, idx) => {
+      s.planned_order = idx + 1;
+    });
+
+    buildAndOptimizeTour(copy);
+  };
+
+  const handleSaveStopDetails = (updatedStop: TourStop) => {
+    if (!savedTour) return;
+    const updatedStops = savedTour.stops.map(s => s.id === updatedStop.id ? updatedStop : s);
+    buildAndOptimizeTour(updatedStops);
+    setIsEditListingOpen(false);
+  };
+
+  const handleSaveAppointmentNote = (stopId: string, status: any, notes: string) => {
+    if (!savedTour) return;
+    const updatedStops = savedTour.stops.map(s => {
+      if (s.id === stopId) {
+        return { ...s, appointment_status: status, agent_notes: notes };
+      }
+      return s;
+    });
+    buildAndOptimizeTour(updatedStops);
+    setIsMessageModalOpen(false);
   };
 
   const handleUpdateStopBuffers = (stopId: string, visitMins: number, travelBufferMins: number) => {
@@ -559,9 +623,20 @@ function NewTourWizardContent() {
               <TimelineView
                 tour={savedTour}
                 onSelectStop={() => {}}
-                onToggleLock={() => {}}
-                onMoveStop={() => {}}
-                onOpenMessageModal={() => {}}
+                onToggleLock={handleToggleLock}
+                onMoveStop={handleMoveStop}
+                onOpenMessageModal={(stop) => {
+                  setActiveMessageStop(stop);
+                  setIsMessageModalOpen(true);
+                }}
+                onOpenEditListingModal={(stop) => {
+                  setActiveEditStop(stop);
+                  setIsEditListingOpen(true);
+                }}
+                onOpenAgentEmailModal={(stop) => {
+                  setActiveAgentEmailStop(stop);
+                  setIsAgentEmailOpen(true);
+                }}
                 onUpdateStopBuffers={handleUpdateStopBuffers}
                 onUpdateStopPriority={handleUpdateStopPriority}
                 onRemoveStop={handleRemoveStop}
@@ -700,6 +775,49 @@ function NewTourWizardContent() {
         onClose={() => setIsAiUploadOpen(false)}
         onAddExtractedStops={handleAddExtractedStops}
       />
+
+      {/* Edit Listing Modal */}
+      <EditListingModal
+        stop={activeEditStop}
+        isOpen={isEditListingOpen}
+        onClose={() => setIsEditListingOpen(false)}
+        onSaveStop={handleSaveStopDetails}
+      />
+
+      {/* Appointment Notes & Status Modal */}
+      {savedTour && (
+        <AppointmentModal
+          tour={savedTour}
+          stop={activeMessageStop}
+          isOpen={isMessageModalOpen}
+          onClose={() => setIsMessageModalOpen(false)}
+          onUpdateStatus={(stopId, status, confirmedTime) => {
+            if (!savedTour) return;
+            const updatedStops = savedTour.stops.map(s => {
+              if (s.id === stopId) {
+                return {
+                  ...s,
+                  appointment_status: status,
+                  confirmed_start: confirmedTime || s.confirmed_start
+                };
+              }
+              return s;
+            });
+            buildAndOptimizeTour(updatedStops);
+            setIsMessageModalOpen(false);
+          }}
+        />
+      )}
+
+      {/* Listing Agent Appointment Email Modal */}
+      {savedTour && (
+        <AgentAppointmentEmailModal
+          stop={activeAgentEmailStop}
+          tour={savedTour}
+          isOpen={isAgentEmailOpen}
+          onClose={() => setIsAgentEmailOpen(false)}
+        />
+      )}
 
       {/* Client Email Modal */}
       {savedTour && (
