@@ -21,7 +21,8 @@ import {
   Hash,
   ChevronLeft,
   Users,
-  UploadCloud
+  UploadCloud,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -34,11 +35,12 @@ function NewTourWizardContent() {
   const contacts = getContactsFromStorage();
 
   const [step, setStep] = React.useState<number>(1);
-  const [inputMode, setInputMode] = React.useState<'MLS' | 'ADDRESS' | 'AI'>('MLS');
+  // Default primary input mode set to 'AI' (MLS Lookup hidden until MLS subscription active)
+  const [inputMode, setInputMode] = React.useState<'AI' | 'ADDRESS'>('AI');
   const [loading, setLoading] = React.useState<boolean>(false);
   const [isAiUploadOpen, setIsAiUploadOpen] = React.useState(false);
 
-  // Single MLS Lookup
+  // Single MLS Lookup (preserved for future API subscription)
   const [singleMlsInput, setSingleMlsInput] = React.useState('');
   const [previewListing, setPreviewListing] = React.useState<MlsListingResult | null>(null);
   const [isSearchingMls, setIsSearchingMls] = React.useState(false);
@@ -73,9 +75,6 @@ function NewTourWizardContent() {
   const [defaultTravelBuffer, setDefaultTravelBuffer] = React.useState(profile.default_travel_buffer || 5);
 
   // Bulk Inputs
-  const [bulkMlsInput, setBulkMlsInput] = React.useState(
-    `ONEKEY-3489102\nONEKEY-3501298\nONEKEY-3512004\nONEKEY-3498210`
-  );
   const [bulkAddressInput, setBulkAddressInput] = React.useState(
     `123 Main St, Great Neck, NY\n45 Harbor Rd, Manhasset, NY\n12 Northern Blvd, Roslyn, NY\n88 Forest Ave, Glen Cove, NY`
   );
@@ -91,48 +90,6 @@ function NewTourWizardContent() {
       setClientEmail(found.email);
       setName(`${found.name} Showing Tour`);
     }
-  };
-
-  const handleSingleMlsLookup = async () => {
-    if (!singleMlsInput.trim()) return;
-    setIsSearchingMls(true);
-    const result = await lookupByMlsNumber(singleMlsInput);
-    setPreviewListing(result);
-    setIsSearchingMls(false);
-  };
-
-  const handleAddPreviewToList = () => {
-    if (!previewListing) return;
-    const newStop: Partial<TourStop> = {
-      id: `stop_${Date.now()}`,
-      original_input: previewListing.mls_number,
-      normalized_address: previewListing.normalized_address,
-      latitude: previewListing.latitude,
-      longitude: previewListing.longitude,
-      geocode_status: 'RESOLVED',
-      mls_number: previewListing.mls_number,
-      list_price: previewListing.list_price,
-      beds: previewListing.beds,
-      baths: previewListing.baths,
-      sqft: previewListing.sqft,
-      listing_agent_name: previewListing.listing_agent_name,
-      listing_agent_phone: previewListing.listing_agent_phone,
-      listing_agent_email: previewListing.listing_agent_email,
-      listing_brokerage: previewListing.listing_brokerage,
-      agent_notes: previewListing.agent_notes,
-      priority: stops.length === 0 ? 'MUST_SEE' : 'PREFERRED',
-      appointment_status: 'NOT_REQUESTED',
-      scheduling_mode: 'FLEXIBLE',
-      visit_minutes: defaultVisitMins,
-      access_before_minutes: defaultAccessMins,
-      access_after_minutes: 0,
-      travel_buffer_minutes: defaultTravelBuffer,
-      availability_windows: []
-    };
-
-    setStops(prev => [...prev, newStop]);
-    setSingleMlsInput('');
-    setPreviewListing(null);
   };
 
   const handleAddExtractedStops = async (extractedList: Partial<TourStop>[]) => {
@@ -181,89 +138,50 @@ function NewTourWizardContent() {
   const handleProcessBulkInput = async () => {
     setLoading(true);
 
-    if (inputMode === 'MLS') {
-      const mlsLines = bulkMlsInput
-        .split('\n')
-        .map(l => l.trim())
-        .filter(l => l.length > 0);
+    const addressLines = bulkAddressInput
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
 
-      if (mlsLines.length === 0 && stops.length === 0) {
-        alert('Please enter at least one MLS Number.');
+    if (addressLines.length === 0 && stops.length === 0) {
+      if (inputMode === 'AI') {
+        setIsAiUploadOpen(true);
         setLoading(false);
         return;
       }
+      alert('Please enter at least one property address.');
+      setLoading(false);
+      return;
+    }
 
-      if (mlsLines.length > 0) {
-        const mlsResults = await batchLookupMlsNumbers(mlsLines);
-        const newStops: Partial<TourStop>[] = mlsResults.map((res, idx) => ({
-          id: `stop_${Date.now()}_${idx}`,
-          original_input: res.mls_number,
-          normalized_address: res.normalized_address,
-          latitude: res.latitude,
-          longitude: res.longitude,
-          geocode_status: 'RESOLVED',
-          mls_number: res.mls_number,
-          list_price: res.list_price,
-          beds: res.beds,
-          baths: res.baths,
-          sqft: res.sqft,
-          listing_agent_name: res.listing_agent_name,
-          listing_agent_phone: res.listing_agent_phone,
-          listing_agent_email: res.listing_agent_email,
-          listing_brokerage: res.listing_brokerage,
-          agent_notes: res.agent_notes,
-          priority: (idx === 0 && stops.length === 0) ? 'MUST_SEE' : 'PREFERRED',
-          appointment_status: 'NOT_REQUESTED',
-          scheduling_mode: 'FLEXIBLE',
-          visit_minutes: defaultVisitMins,
-          access_before_minutes: defaultAccessMins,
-          access_after_minutes: 0,
-          travel_buffer_minutes: defaultTravelBuffer,
-          availability_windows: []
-        }));
-        setStops(prev => [...prev, ...newStops]);
-      }
-    } else if (inputMode === 'ADDRESS') {
-      const addressLines = bulkAddressInput
-        .split('\n')
-        .map(l => l.trim())
-        .filter(l => l.length > 0);
-
-      if (addressLines.length === 0 && stops.length === 0) {
-        alert('Please enter at least one property address.');
-        setLoading(false);
-        return;
-      }
-
-      if (addressLines.length > 0) {
-        const geocodedResults = await batchGeocodeAddresses(addressLines);
-        const newStops: Partial<TourStop>[] = geocodedResults.map((geo, idx) => ({
-          id: `stop_${Date.now()}_${idx}`,
-          original_input: addressLines[idx],
-          normalized_address: geo.normalized_address,
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-          geocode_status: geo.geocode_status,
-          mls_number: geo.mls_number,
-          list_price: geo.list_price,
-          beds: geo.beds,
-          baths: geo.baths,
-          sqft: geo.sqft,
-          listing_agent_name: geo.listing_agent_name,
-          listing_agent_phone: geo.listing_agent_phone,
-          listing_agent_email: geo.listing_agent_email,
-          listing_brokerage: geo.listing_brokerage,
-          priority: (idx === 0 && stops.length === 0) ? 'MUST_SEE' : 'PREFERRED',
-          appointment_status: 'NOT_REQUESTED',
-          scheduling_mode: 'FLEXIBLE',
-          visit_minutes: defaultVisitMins,
-          access_before_minutes: defaultAccessMins,
-          access_after_minutes: 0,
-          travel_buffer_minutes: defaultTravelBuffer,
-          availability_windows: []
-        }));
-        setStops(prev => [...prev, ...newStops]);
-      }
+    if (addressLines.length > 0) {
+      const geocodedResults = await batchGeocodeAddresses(addressLines);
+      const newStops: Partial<TourStop>[] = geocodedResults.map((geo, idx) => ({
+        id: `stop_${Date.now()}_${idx}`,
+        original_input: addressLines[idx],
+        normalized_address: geo.normalized_address,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        geocode_status: geo.geocode_status,
+        mls_number: geo.mls_number,
+        list_price: geo.list_price,
+        beds: geo.beds,
+        baths: geo.baths,
+        sqft: geo.sqft,
+        listing_agent_name: geo.listing_agent_name,
+        listing_agent_phone: geo.listing_agent_phone,
+        listing_agent_email: geo.listing_agent_email,
+        listing_brokerage: geo.listing_brokerage,
+        priority: (idx === 0 && stops.length === 0) ? 'MUST_SEE' : 'PREFERRED',
+        appointment_status: 'NOT_REQUESTED',
+        scheduling_mode: 'FLEXIBLE',
+        visit_minutes: defaultVisitMins,
+        access_before_minutes: defaultAccessMins,
+        access_after_minutes: 0,
+        travel_buffer_minutes: defaultTravelBuffer,
+        availability_windows: []
+      }));
+      setStops(prev => [...prev, ...newStops]);
     }
 
     setLoading(false);
@@ -319,34 +237,45 @@ function NewTourWizardContent() {
     <div className="space-y-4">
       {/* Header Bar */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div className="space-y-0.5">
-          <Link href="/" className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1">
-            <ChevronLeft className="w-3.5 h-3.5" />
-            Dashboard
+        <div className="flex items-center space-x-3">
+          <Link
+            href="/dashboard"
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
           </Link>
-          <h1 className="text-lg font-black text-white tracking-tight">
-            {step === 1 ? 'Configure Showing Tour Window & MLS Listings' : 'Review & Verify Property Schedule List'}
-          </h1>
+          <div>
+            <h1 className="text-lg font-black text-white tracking-tight">Create New Showing Day Tour</h1>
+            <p className="text-xs text-slate-400">Step {step} of 2: {step === 1 ? 'Tour Details & Listings' : 'Review Property Sequence'}</p>
+          </div>
         </div>
 
-        <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
-          Step {step} of 2
-        </span>
+        {step === 2 && (
+          <button
+            type="button"
+            onClick={handleCreateTour}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg transition-transform active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Generate & Optimize Route</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* Step 1: 2-Column Desktop Grid */}
+      {/* Step 1 Form */}
       {step === 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Column: Tour & Client Parameters */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Tour & Client Settings */}
           <div className="lg:col-span-5 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-4">
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-800 pb-2">
+            <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-800 pb-2">
               <Calendar className="w-4 h-4 text-indigo-400" />
-              <span>1. Tour & Buyer Client Settings</span>
+              <span>1. TOUR & BUYER CLIENT DETAILS</span>
             </h2>
 
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300">Tour Name</label>
+                <label className="text-[11px] font-bold text-slate-300">Showing Tour Title</label>
                 <input
                   type="text"
                   value={name}
@@ -439,135 +368,87 @@ function NewTourWizardContent() {
             </div>
           </div>
 
-          {/* Right Column: MLS Lookup & Property Inputs */}
+          {/* Right Column: AI Document Scanner & Candidate Properties */}
           <div className="lg:col-span-7 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
               <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Hash className="w-4 h-4 text-indigo-400" />
-                <span>2. MLS LISTINGS & CANDIDATE PROPERTIES</span>
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span>2. CANDIDATE PROPERTIES & LISTINGS</span>
               </h2>
 
-              {/* 3 Input Mode Tabs: MLS Lookup, Raw Addresses, AI Scan Document */}
+              {/* 2 Primary Input Mode Tabs: AI Scan (Primary) & Candidate Addresses */}
               <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] w-full sm:w-auto">
                 <button
                   type="button"
-                  onClick={() => setInputMode('MLS')}
-                  className={`flex-1 sm:flex-none px-2.5 py-1 rounded font-semibold flex items-center justify-center gap-1 transition-colors ${
-                    inputMode === 'MLS' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                  onClick={() => setInputMode('AI')}
+                  className={`flex-1 sm:flex-none px-3 py-1 rounded font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    inputMode === 'AI' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md' : 'text-purple-300 hover:text-white'
                   }`}
                 >
-                  <Hash className="w-3 h-3 text-indigo-300" />
-                  <span>MLS Lookup</span>
+                  <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                  <span>+ AI Listing Scan</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setInputMode('ADDRESS')}
-                  className={`flex-1 sm:flex-none px-2.5 py-1 rounded font-semibold flex items-center justify-center gap-1 transition-colors ${
-                    inputMode === 'ADDRESS' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                  className={`flex-1 sm:flex-none px-3 py-1 rounded font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    inputMode === 'ADDRESS' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <MapPin className="w-3 h-3 text-emerald-400" />
-                  <span>Addresses</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInputMode('AI');
-                    setIsAiUploadOpen(true);
-                  }}
-                  className={`flex-1 sm:flex-none px-2.5 py-1 rounded font-semibold flex items-center justify-center gap-1 transition-colors ${
-                    inputMode === 'AI' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow' : 'text-purple-400 hover:text-white'
-                  }`}
-                >
-                  <Sparkles className="w-3 h-3 text-purple-300" />
-                  <span>+ AI Scan</span>
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Candidate Addresses</span>
                 </button>
               </div>
             </div>
 
-            {inputMode === 'MLS' && (
-              <div className="space-y-3">
-                <div className="space-y-1.5 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-                  <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
-                    <Search className="w-3 h-3 text-indigo-400" />
-                    Enter MLS Number (Live Lookup)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={singleMlsInput}
-                      onChange={e => setSingleMlsInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleSingleMlsLookup()}
-                      placeholder="e.g. ONEKEY-3489102 or 3501298"
-                      className="flex-1 bg-slate-900 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-indigo-500 font-mono"
-                    />
-                    <button
-                      type="button"
-                      disabled={isSearchingMls || !singleMlsInput.trim()}
-                      onClick={handleSingleMlsLookup}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors disabled:opacity-50"
-                    >
-                      {isSearchingMls ? 'Searching...' : 'Fetch Listing'}
-                    </button>
+            {/* Primary Input Mode 1: AI Scan Scanner */}
+            {inputMode === 'AI' && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="p-5 rounded-2xl bg-slate-950 border-2 border-purple-500/50 space-y-3 text-center shadow-xl">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/40 text-purple-300 mx-auto flex items-center justify-center shadow-lg">
+                    <Sparkles className="w-6 h-6" />
                   </div>
+                  <div className="space-y-1">
+                    <h4 className="font-black text-white text-sm">DeepSeek AI Listing Flyer & Document Scanner</h4>
+                    <p className="text-[11px] text-slate-400 max-w-md mx-auto leading-relaxed">
+                      Upload property flyers, MLS PDF printouts, or listing screenshots. AI automatically extracts addresses, pricing, specs, listing agent contacts, and Open House dates!
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAiUploadOpen(true)}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-500 hover:from-purple-500 hover:to-emerald-400 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xl transition-transform active:scale-95 cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4 text-purple-200" />
+                    <span>Upload Flyer PDF / Image to Scan</span>
+                  </button>
                 </div>
 
-                {previewListing && (
-                  <div className="p-3 rounded-xl bg-slate-900 border border-emerald-500/50 space-y-2 animate-fadeIn shadow-md">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Listing Fetched
-                        </div>
-                        <div className="text-xs font-bold text-white mt-0.5">
-                          {previewListing.normalized_address}
-                        </div>
-                        <div className="text-[11px] text-slate-400">
-                          MLS #{previewListing.mls_number} · ${previewListing.list_price.toLocaleString()} ({previewListing.beds} Bed, {previewListing.baths} Bath)
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddPreviewToList}
-                        className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Add to Tour
-                      </button>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-300 grid grid-cols-2">
-                      <div>Listing Agent: <strong className="text-white">{previewListing.listing_agent_name}</strong></div>
-                      <div>Phone: <span className="text-slate-300">{previewListing.listing_agent_phone}</span></div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1 pt-1 border-t border-slate-800">
-                  <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
-                    <span>Or Bulk Paste MLS Numbers (1 per line)</span>
-                    <span className="text-slate-400 font-normal">e.g. ONEKEY-3489102</span>
+                <div className="space-y-1 pt-2 border-t border-slate-800">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <span>Or Paste Candidate Addresses (1 per line)</span>
+                    <span className="text-slate-400 font-normal">Supports 5-12 properties</span>
                   </label>
                   <textarea
                     rows={4}
-                    value={bulkMlsInput}
-                    onChange={e => setBulkMlsInput(e.target.value)}
-                    placeholder="ONEKEY-3489102&#10;ONEKEY-3501298"
+                    value={bulkAddressInput}
+                    onChange={e => setBulkAddressInput(e.target.value)}
+                    placeholder="123 Main St, Great Neck, NY&#10;45 Harbor Rd, Manhasset, NY"
                     className="w-full bg-slate-950 text-slate-200 font-mono text-xs p-3 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
                   />
                 </div>
               </div>
             )}
 
+            {/* Input Mode 2: Candidate Addresses */}
             {inputMode === 'ADDRESS' && (
-              <div className="space-y-1">
+              <div className="space-y-1 animate-fadeIn">
                 <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
                   <span>Paste Candidate Addresses (1 per line)</span>
                   <span className="text-slate-400 font-normal">Supports 5-12 properties</span>
                 </label>
                 <textarea
-                  rows={6}
+                  rows={7}
                   value={bulkAddressInput}
                   onChange={e => setBulkAddressInput(e.target.value)}
                   placeholder="123 Main St, Great Neck, NY&#10;45 Harbor Rd, Manhasset, NY"
@@ -576,38 +457,14 @@ function NewTourWizardContent() {
               </div>
             )}
 
-            {inputMode === 'AI' && (
-              <div className="space-y-3 p-5 rounded-xl bg-slate-950 border border-purple-500/40 text-center animate-fadeIn">
-                <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 mx-auto flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-extrabold text-white text-xs">DeepSeek AI Listing Document & Image Scanner</h4>
-                  <p className="text-[11px] text-slate-400 max-w-md mx-auto">
-                    Upload flyer PDFs, MLS sheets, or property photos. AI will extract property specs, agent contact details, and save cropped photos to Cloudflare R2!
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAiUploadOpen(true)}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-xl transition-transform active:scale-95 cursor-pointer"
-                >
-                  <UploadCloud className="w-4 h-4 text-purple-200" />
-                  <span>Launch DeepSeek AI Scanner</span>
-                </button>
-              </div>
-            )}
-
-            {inputMode !== 'AI' && (
-              <button
-                disabled={loading}
-                onClick={handleProcessBulkInput}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow transition-all disabled:opacity-50"
-              >
-                <span>{loading ? 'Processing Listings...' : 'Process Listings & Proceed'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <button
+              disabled={loading}
+              onClick={handleProcessBulkInput}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <span>{loading ? 'Processing Listings...' : 'Process Listings & Proceed'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
@@ -623,9 +480,9 @@ function NewTourWizardContent() {
               </h3>
               <button
                 onClick={() => setStep(1)}
-                className="text-xs font-semibold text-indigo-400 hover:underline"
+                className="text-xs font-semibold text-indigo-400 hover:underline cursor-pointer"
               >
-                ← Add More MLS Numbers / Documents
+                ← Add More Properties / Documents
               </button>
             </div>
 
@@ -649,41 +506,26 @@ function NewTourWizardContent() {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <select
-                      value={stop.priority}
+                      value={stop.priority || 'PREFERRED'}
                       onChange={e => handleUpdateStopPriority(idx, e.target.value)}
-                      className="bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold px-2 py-1 rounded-lg focus:outline-none"
+                      className="bg-slate-900 text-white text-[11px] px-2 py-1 rounded border border-slate-700"
                     >
-                      <option value="MUST_SEE">Must See</option>
-                      <option value="PREFERRED">Preferred</option>
-                      <option value="OPTIONAL">Optional</option>
+                      <option value="MUST_SEE">⭐ Must See</option>
+                      <option value="PREFERRED">🔹 Preferred</option>
+                      <option value="OPTIONAL">⚪ Optional</option>
                     </select>
 
                     <button
                       onClick={() => handleRemoveStop(idx)}
-                      className="p-1 text-slate-400 hover:text-rose-400 rounded transition-colors"
+                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                      title="Remove Stop"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setStep(1)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleCreateTour}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-transform active:scale-95"
-            >
-              <Sparkles className="w-4 h-4" />
-              Build Feasible Itinerary & Open Workspace
-            </button>
           </div>
         </div>
       )}
@@ -698,9 +540,9 @@ function NewTourWizardContent() {
   );
 }
 
-export default function NewTourPage() {
+export default function NewTourWizardPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading tour wizard...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-slate-400 text-xs">Loading Showing Tour Wizard...</div>}>
       <NewTourWizardContent />
     </Suspense>
   );
