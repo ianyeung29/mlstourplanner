@@ -34,7 +34,8 @@ import {
   X,
   Save,
   Sparkles,
-  Loader2
+  Loader2,
+  Navigation
 } from 'lucide-react';
 
 export default function TourWorkspacePage() {
@@ -43,6 +44,7 @@ export default function TourWorkspacePage() {
   const tourId = params.id as string;
 
   const [tour, setTour] = React.useState<Tour | null>(null);
+  const [activeFieldStopIndex, setActiveFieldStopIndex] = React.useState(0);
   const [selectedStopId, setSelectedStopId] = React.useState<string | undefined>(undefined);
   const [hoveredStopId, setHoveredStopId] = React.useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = React.useState<'TIMELINE' | 'MAP'>('TIMELINE');
@@ -795,6 +797,59 @@ export default function TourWorkspacePage() {
         isOpen={isAgentEmailOpen}
         onClose={() => setIsAgentEmailOpen(false)}
       />
+
+      {/* 📱 Mobile Outdoor Field Mode: Sticky "Next Showing Stop" Navigation Bar */}
+      {tour && tour.stops && tour.stops.length > 0 && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-3 bg-slate-900/98 backdrop-blur-md border-t border-indigo-500/50 shadow-2xl space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow">
+                #{activeFieldStopIndex + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-extrabold text-white text-xs truncate">
+                  {tour.stops[activeFieldStopIndex]?.normalized_address || 'Property Stop'}
+                </div>
+                <div className="text-[11px] text-indigo-300 font-semibold flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Arrives: {tour.stops[activeFieldStopIndex]?.planned_arrival || 'TBD'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Thumb Navigation Controls */}
+            <div className="flex items-center space-x-1 shrink-0">
+              <button
+                type="button"
+                disabled={activeFieldStopIndex === 0}
+                onClick={() => setActiveFieldStopIndex(prev => Math.max(0, prev - 1))}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-200 text-xs font-bold disabled:opacity-40 cursor-pointer"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                disabled={activeFieldStopIndex >= tour.stops.length - 1}
+                onClick={() => setActiveFieldStopIndex(prev => Math.min(tour.stops.length - 1, prev + 1))}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-200 text-xs font-bold disabled:opacity-40 cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+
+          {/* 1-Tap Google Maps GPS Navigation Launch Button */}
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(tour.stops[activeFieldStopIndex]?.normalized_address || '')}&travelmode=driving`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer"
+          >
+            <Navigation className="w-4 h-4 text-white" />
+            <span>Launch Google Maps GPS Navigation (Stop #{activeFieldStopIndex + 1})</span>
+          </a>
+        </div>
+      )}
     </div>
   );
 }

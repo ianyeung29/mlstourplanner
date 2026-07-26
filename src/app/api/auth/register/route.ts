@@ -54,7 +54,9 @@ export async function POST(request: Request) {
       }
     });
 
-    const verifyLink = `http://localhost:3000/api/auth/verify?token=${verificationToken}`;
+    const requestUrl = new URL(request.url);
+    const appOrigin = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
+    const verifyLink = `${appOrigin}/api/auth/verify?token=${verificationToken}`;
 
     try {
       await resend.emails.send({

@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   try {
     const { customerId, userEmail, origin } = await req.json();
 
-    const appOrigin = origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appOrigin = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || origin || process.env.NEXT_PUBLIC_APP_URL || 'https://www.mlstourplanner.com';
 
     let stripeCustomerId = customerId;
 

@@ -3,9 +3,34 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
+const BASE_URL = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://www.mlstourplanner.com';
+
 export const metadata: Metadata = {
-  title: 'MLS Tour Planner — Real Estate Multi-Listing Showing Tour Optimizer',
-  description: 'Desktop and mobile web application for planning, optimizing, and scheduling multi-property showing tours for buyer agents.',
+  metadataBase: new URL(BASE_URL),
+  title: 'MLS Tour Planner — Turn Messy Listings into Conflict-Free Showing Days',
+  description: 'Automated showing tour optimizer for real estate agents. Sequences property stops, calculates travel buffers, handles open houses, and dispatches client itineraries in 2 minutes.',
+  keywords: ['MLS tour planner', 'real estate showing tour', 'property route optimizer', 'showing schedule planner', 'buyer agent itinerary'],
+  alternates: {
+    canonical: '/',
+  },
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
+  openGraph: {
+    title: 'MLS Tour Planner — Showing Day Itinerary & Route Optimizer',
+    description: 'Turn messy listing sheets into a conflict-aware, client-ready showing day in under 2 minutes.',
+    url: BASE_URL,
+    siteName: 'MLS Tour Planner',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MLS Tour Planner',
+    description: 'Conflict-aware showing tour planning & client itinerary dispatches for real estate agents.',
+  },
 };
 
 export default function RootLayout({

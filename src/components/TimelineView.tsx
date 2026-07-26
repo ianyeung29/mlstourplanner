@@ -26,7 +26,9 @@ import {
   Code2,
   AlertTriangle,
   CheckCircle2,
-  Mail
+  Mail,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 
 interface TimelineViewProps {
@@ -194,9 +196,12 @@ export default function TimelineView({
                   </select>
 
                   {isOutside && (
-                    <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold flex items-center gap-1">
+                    <span
+                      title={`Estimated arrival (${stop.planned_arrival || 'TBD'}) exceeds tour latest finish constraint of ${tour.latest_finish || '16:00 PM'}`}
+                      className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold flex items-center gap-1 cursor-help"
+                    >
                       <AlertTriangle className="w-3 h-3 text-rose-400" />
-                      Outside Window
+                      <span>Exceeds {tour.latest_finish || 'Finish'} Window</span>
                     </span>
                   )}
                 </div>
@@ -404,17 +409,45 @@ export default function TimelineView({
 
       {/* ⚠️ Red/Rose Box Container: Property Stops Beyond Tour Window (Agent Cannot Make It) */}
       {outsideWindowStops.length > 0 && (
-        <div className="p-4 rounded-2xl bg-rose-950/20 border-2 border-rose-500/80 shadow-xl space-y-3 animate-fadeIn">
-          <div className="flex items-center justify-between border-b border-rose-500/30 pb-2">
+        <div className="p-4 rounded-2xl bg-rose-950/30 border-2 border-rose-500/80 shadow-xl space-y-3 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-rose-500/30 pb-2">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400" />
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
               <h3 className="text-xs font-black text-rose-300 uppercase tracking-wider">
-                Beyond Tour Window — Agent Cannot Make It (Finishes after {tour.latest_finish || '16:00 PM'})
+                Beyond Tour Window — {outsideWindowStops.length} Unreachable Stop{outsideWindowStops.length > 1 ? 's' : ''} (Finishes after {tour.latest_finish || '16:00 PM'})
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[10px] font-extrabold">
-              {outsideWindowStops.length} Unreachable Stop{outsideWindowStops.length > 1 ? 's' : ''}
+            <span className="px-2 py-0.5 rounded-full bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[10px] font-extrabold shrink-0">
+              Action Required
             </span>
+          </div>
+
+          {/* Schedule Fix Assistant Box */}
+          <div className="p-3 rounded-xl bg-slate-950 border border-rose-500/40 space-y-2 text-xs">
+            <div className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px]">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Schedule Assistant Suggestion:</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Reducing stop visit durations by 5 mins will allow all <strong>{outsideWindowStops.length} unreachable stop(s)</strong> to fit within your <strong>{tour.latest_finish || '16:00 PM'}</strong> finish window.
+            </p>
+            {onUpdateStopBuffers && (
+              <button
+                type="button"
+                onClick={() => {
+                  tour.stops.forEach(stop => {
+                    const currentVisit = stop.visit_minutes || 25;
+                    const newVisit = Math.max(10, currentVisit - 5);
+                    onUpdateStopBuffers?.(stop.id, newVisit, stop.travel_buffer_minutes || 5);
+                  });
+                  if (onReoptimize) onReoptimize();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 hover:text-white text-[11px] font-black flex items-center gap-1.5 shadow transition-all cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>Apply 5m Visit Reduction & Re-Optimize Schedule</span>
+              </button>
+            )}
           </div>
 
           <div className="space-y-2">

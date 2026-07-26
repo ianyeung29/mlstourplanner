@@ -287,22 +287,23 @@ export function deleteTour(id: string): void {
   saveToursToStorage(tours);
 }
 
-// --- USER PROFILE & SUBSCRIPTION ---
 export function getUserProfile(): UserProfile {
-  if (typeof window === 'undefined') return INITIAL_USER_PROFILE;
+  if (typeof window === 'undefined') return GUEST_USER_PROFILE;
   const raw = localStorage.getItem(STORAGE_KEY_PROFILE);
   if (!raw) {
-    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(INITIAL_USER_PROFILE));
-    return INITIAL_USER_PROFILE;
+    return GUEST_USER_PROFILE;
   }
   try {
     const parsed = JSON.parse(raw);
+    if (!parsed.email || !parsed.id) {
+      return GUEST_USER_PROFILE;
+    }
     return {
-      ...INITIAL_USER_PROFILE,
+      ...GUEST_USER_PROFILE,
       ...parsed
     };
   } catch (e) {
-    return INITIAL_USER_PROFILE;
+    return GUEST_USER_PROFILE;
   }
 }
 

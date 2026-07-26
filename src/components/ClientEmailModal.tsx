@@ -32,7 +32,9 @@ export default function ClientEmailModal({ tour, isOpen, onClose }: ClientEmailM
 
   if (!isOpen) return null;
 
-  const emailData: ClientEmailResult = generateClientItineraryEmail(tour, user);
+  const envBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  const currentOrigin = envBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://www.mlstourplanner.com');
+  const emailData: ClientEmailResult = generateClientItineraryEmail(tour, user, currentOrigin);
 
   const handleSendResendEmail = async () => {
     if (!recipientEmail.trim()) {

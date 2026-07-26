@@ -8,12 +8,23 @@ export interface ClientEmailResult {
   onlineUrl: string;
 }
 
+export function getAppBaseUrl(): string {
+  const envBaseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (envBaseUrl) return envBaseUrl;
+
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return window.location.origin;
+  }
+  return 'https://www.mlstourplanner.com';
+}
+
 export function generateClientItineraryEmail(
   tour: Tour,
   user: UserProfile,
-  baseUrl: string = 'http://localhost:3000'
+  baseUrl?: string
 ): ClientEmailResult {
-  const onlineUrl = `${baseUrl}/tours/${tour.id}`;
+  const resolvedBaseUrl = baseUrl || getAppBaseUrl();
+  const onlineUrl = `${resolvedBaseUrl}/tours/${tour.id}`;
   const clientName = tour.client_display_name || 'Valued Client';
   const agentName = user.full_name || 'Your Agent';
   const brokerage = user.brokerage_name || 'Side Luxury Real Estate';

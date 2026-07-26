@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const appOrigin = origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appOrigin = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || origin || process.env.NEXT_PUBLIC_APP_URL || 'https://www.mlstourplanner.com';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',

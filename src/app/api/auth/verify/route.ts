@@ -4,16 +4,17 @@ import { prisma } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const token = searchParams.get('token');
+  const requestUrl = new URL(request.url);
+  const appOrigin = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
+  const token = requestUrl.searchParams.get('token');
 
   if (!token) {
-    return NextResponse.redirect('http://localhost:3000/login?error=invalid_token');
+    return NextResponse.redirect(`${appOrigin}/login?error=invalid_token`);
   }
 
   try {
     if (!process.env.DATABASE_URL) {
-      return NextResponse.redirect('http://localhost:3000/login?verified=true');
+      return NextResponse.redirect(`${appOrigin}/login?verified=true`);
     }
 
     const user = await prisma.user.findFirst({
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
     });
 
     if (!user) {
-      return NextResponse.redirect('http://localhost:3000/login?error=token_not_found');
+      return NextResponse.redirect(`${appOrigin}/login?error=token_not_found`);
     }
 
     await prisma.user.update({
@@ -32,8 +33,8 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.redirect('http://localhost:3000/login?verified=true');
+    return NextResponse.redirect(`${appOrigin}/login?verified=true`);
   } catch (error) {
-    return NextResponse.redirect('http://localhost:3000/login?error=verification_failed');
+    return NextResponse.redirect(`${appOrigin}/login?error=verification_failed`);
   }
 }
