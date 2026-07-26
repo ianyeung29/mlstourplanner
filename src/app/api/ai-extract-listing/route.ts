@@ -79,7 +79,7 @@ ${cleanInputText.length > 0 ? cleanInputText : fileName}
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash',
         messages: [
           { role: 'system', content: 'You extract real estate listing metadata from multi-page or multi-image documents into structured JSON arrays.' },
           { role: 'user', content: prompt }
