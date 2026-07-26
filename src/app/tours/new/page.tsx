@@ -6,7 +6,13 @@ import { Tour, TourStop, ClientContact } from '@/types/tour';
 import { batchGeocodeAddresses, geocodeAddress } from '@/services/geocode';
 import { lookupByMlsNumber, batchLookupMlsNumbers, MlsListingResult } from '@/services/mlsService';
 import { saveTour, getUserProfile, getContactsFromStorage } from '@/services/storage';
+import { optimizeTourSchedule } from '@/services/routeOptimizer';
 import AiUploadModal from '@/components/AiUploadModal';
+import TourStageBar from '@/components/TourStageBar';
+import TimelineView from '@/components/TimelineView';
+import MapView from '@/components/MapView';
+import ClientEmailModal from '@/components/ClientEmailModal';
+import { triggerAuthModal } from '@/services/authModal';
 import {
   Calendar,
   Clock,
@@ -16,13 +22,20 @@ import {
   ArrowRight,
   Plus,
   Trash2,
-  Search,
   CheckCircle2,
-  Hash,
   ChevronLeft,
   Users,
   UploadCloud,
-  FileText
+  FileText,
+  Share2,
+  Copy,
+  Printer,
+  Mail,
+  Sliders,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  Check
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -33,20 +46,19 @@ function NewTourWizardContent() {
 
   const profile = getUserProfile();
   const contacts = getContactsFromStorage();
+  const isLoggedIn = !!profile && !!profile.email && !!profile.id;
 
-  const [step, setStep] = React.useState<number>(1);
-  // Default primary input mode set to 'AI' (MLS Lookup hidden until MLS subscription active)
+  // 3 Stages: 1 = Properties, 2 = Route, 3 = Share
+  const [stage, setStage] = React.useState<1 | 2 | 3>(1);
   const [inputMode, setInputMode] = React.useState<'AI' | 'ADDRESS'>('AI');
   const [loading, setLoading] = React.useState<boolean>(false);
   const [isAiUploadOpen, setIsAiUploadOpen] = React.useState(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = React.useState(false);
+  const [isClientEmailOpen, setIsClientEmailOpen] = React.useState(false);
+  const [copiedLink, setCopiedLink] = React.useState(false);
 
-  // Single MLS Lookup (preserved for future API subscription)
-  const [singleMlsInput, setSingleMlsInput] = React.useState('');
-  const [previewListing, setPreviewListing] = React.useState<MlsListingResult | null>(null);
-  const [isSearchingMls, setIsSearchingMls] = React.useState(false);
-
-  // Form State
-  const [name, setName] = React.useState('North Shore Showing Tour');
+  // Form State (Defaulted automatically from agent saved preferences)
+  const [name, setName] = React.useState('Showing Tour');
   const [selectedContactId, setSelectedContactId] = React.useState<string>(contactIdParam || (contacts.length > 0 ? contacts[0].id : ''));
   const [clientDisplayName, setClientDisplayName] = React.useState<string>('');
   const [clientEmail, setClientEmail] = React.useState<string>('');
@@ -74,12 +86,13 @@ function NewTourWizardContent() {
   const [defaultAccessMins, setDefaultAccessMins] = React.useState(profile.default_access_minutes || 5);
   const [defaultTravelBuffer, setDefaultTravelBuffer] = React.useState(profile.default_travel_buffer || 5);
 
-  // Bulk Inputs
+  // Default candidate addresses pre-filled for 1-click instant route generation
   const [bulkAddressInput, setBulkAddressInput] = React.useState(
     `123 Main St, Great Neck, NY\n45 Harbor Rd, Manhasset, NY\n12 Northern Blvd, Roslyn, NY\n88 Forest Ave, Glen Cove, NY`
   );
 
   const [stops, setStops] = React.useState<Partial<TourStop>[]>([]);
+  const [savedTour, setSavedTour] = React.useState<Tour | null>(null);
 
   // Update client fields when contact dropdown selected
   const handleSelectContact = (contactId: string) => {
@@ -131,8 +144,9 @@ function NewTourWizardContent() {
       };
     }));
 
-    setStops(prev => [...prev, ...newStops]);
-    setStep(2);
+    const combined = [...stops, ...newStops];
+    setStops(combined);
+    buildAndOptimizeTour(combined);
   };
 
   const handleProcessBulkInput = async () => {
@@ -153,6 +167,8 @@ function NewTourWizardContent() {
       setLoading(false);
       return;
     }
+
+    let combinedStops = [...stops];
 
     if (addressLines.length > 0) {
       const geocodedResults = await batchGeocodeAddresses(addressLines);
@@ -181,34 +197,18 @@ function NewTourWizardContent() {
         travel_buffer_minutes: defaultTravelBuffer,
         availability_windows: []
       }));
-      setStops(prev => [...prev, ...newStops]);
+      combinedStops = [...combinedStops, ...newStops];
+      setStops(combinedStops);
     }
 
     setLoading(false);
-    setStep(2);
+    buildAndOptimizeTour(combinedStops);
   };
 
-  const handleRemoveStop = (index: number) => {
-    setStops(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleUpdateStopPriority = (index: number, priority: any) => {
-    setStops(prev => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], priority };
-      return copy;
-    });
-  };
-
-  const handleCreateTour = () => {
-    if (stops.length === 0) {
-      alert('You need at least one valid property stop to build a schedule.');
-      return;
-    }
-
-    const newTour: Tour = {
-      id: `tour_${Date.now()}`,
-      name,
+  const buildAndOptimizeTour = (currentStops: Partial<TourStop>[]) => {
+    const draftTour: Tour = {
+      id: savedTour?.id || `tour_${Date.now()}`,
+      name: name || 'Showing Tour',
       client_display_name: clientDisplayName,
       client_email: clientEmail,
       client_id: selectedContactId,
@@ -224,164 +224,104 @@ function NewTourWizardContent() {
       default_visit_minutes: defaultVisitMins,
       default_access_minutes: defaultAccessMins,
       default_travel_buffer: defaultTravelBuffer,
-      stops: stops as TourStop[],
+      stops: currentStops as TourStop[],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
-    const saved = saveTour(newTour);
-    router.push(`/tours/${saved.id}`);
+    const { updatedTour } = optimizeTourSchedule(draftTour);
+    const persisted = saveTour(updatedTour);
+    setSavedTour(persisted);
+    setStops(persisted.stops);
+    setStage(2);
+  };
+
+  const handleUpdateStopBuffers = (stopId: string, visitMins: number, travelBufferMins: number) => {
+    if (!savedTour) return;
+    const updatedStops = savedTour.stops.map(s => {
+      if (s.id === stopId) {
+        return { ...s, visit_minutes: visitMins, travel_buffer_minutes: travelBufferMins };
+      }
+      return s;
+    });
+    buildAndOptimizeTour(updatedStops);
+  };
+
+  const handleUpdateStopPriority = (stopId: string, priority: any) => {
+    if (!savedTour) return;
+    const updatedStops = savedTour.stops.map(s => {
+      if (s.id === stopId) {
+        return { ...s, priority };
+      }
+      return s;
+    });
+    buildAndOptimizeTour(updatedStops);
+  };
+
+  const handleRemoveStop = (stopId: string) => {
+    if (!savedTour) return;
+    const updatedStops = savedTour.stops.filter(s => s.id !== stopId);
+    buildAndOptimizeTour(updatedStops);
+  };
+
+  const handleReoptimize = () => {
+    if (savedTour) {
+      buildAndOptimizeTour(savedTour.stops);
+    }
+  };
+
+  const handleCopyClientLink = () => {
+    if (!savedTour) return;
+    const url = `${window.location.origin}/tours/${savedTour.id}`;
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div className="flex items-center space-x-3">
-          <Link
-            href="/dashboard"
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-black text-white tracking-tight">Create New Showing Day Tour</h1>
-            <p className="text-xs text-slate-400">Step {step} of 2: {step === 1 ? 'Tour Details & Listings' : 'Review Property Sequence'}</p>
-          </div>
-        </div>
+    <div className="space-y-5 font-sans">
+      {/* 3-Stage Progress Indicator */}
+      <TourStageBar
+        currentStage={stage}
+        onSelectStage={(targetStage) => setStage(targetStage)}
+        canNavigateToRoute={stops.length > 0}
+        canNavigateToShare={stops.length > 0}
+      />
 
-        {step === 2 && (
+      {/* Guest Account Creation Callout Banner */}
+      {!isLoggedIn && (
+        <div className="p-3 rounded-xl bg-indigo-950/60 border border-indigo-500/40 text-xs flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-200">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span><strong>Guest Tour Sandbox:</strong> You are building a sample tour. Create a free account to save and dispatch this itinerary to your buyer!</span>
+          </div>
           <button
             type="button"
-            onClick={handleCreateTour}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg transition-transform active:scale-95 cursor-pointer"
+            onClick={() => triggerAuthModal()}
+            className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] shrink-0 cursor-pointer shadow"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Generate & Optimize Route</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            Create Free Account
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Step 1 Form */}
-      {step === 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Tour & Client Settings */}
-          <div className="lg:col-span-5 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-4">
-            <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-800 pb-2">
-              <Calendar className="w-4 h-4 text-indigo-400" />
-              <span>1. TOUR & BUYER CLIENT DETAILS</span>
-            </h2>
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300">Showing Tour Title</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
-                />
+      {/* STAGE 1: Add Listings (Properties) */}
+      {stage === 1 && (
+        <div className="max-w-[1000px] mx-auto space-y-5 animate-fadeIn">
+          {/* Main Hero Input Card */}
+          <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <h1 className="text-xl font-black text-white tracking-tight">Add Properties & Listings</h1>
+                <p className="text-xs text-slate-400">Upload listing flyers, paste addresses, or scan PDFs to build your showing route</p>
               </div>
 
-              {/* Select Client Contact */}
-              <div className="space-y-1 p-2.5 rounded-xl bg-slate-950 border border-indigo-500/30">
-                <label className="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-indigo-400" />
-                  Select Saved Buyer Client
-                </label>
-                <select
-                  value={selectedContactId}
-                  onChange={e => handleSelectContact(e.target.value)}
-                  className="w-full bg-slate-900 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 focus:outline-none"
-                >
-                  <option value="">-- Manual Client Entry --</option>
-                  {contacts.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.email})
-                    </option>
-                  ))}
-                </select>
-
-                <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-                  <input
-                    type="text"
-                    value={clientDisplayName}
-                    onChange={e => setClientDisplayName(e.target.value)}
-                    placeholder="Client Name"
-                    className="bg-slate-900 text-slate-200 px-2 py-1 rounded border border-slate-800"
-                  />
-                  <input
-                    type="email"
-                    value={clientEmail}
-                    onChange={e => setClientEmail(e.target.value)}
-                    placeholder="Client Email"
-                    className="bg-slate-900 text-slate-200 px-2 py-1 rounded border border-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300">Tour Date</label>
-                <input
-                  type="date"
-                  value={tourDate}
-                  onChange={e => setTourDate(e.target.value)}
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Earliest Start</label>
-                  <input
-                    type="time"
-                    value={earliestStart}
-                    onChange={e => setEarliestStart(e.target.value)}
-                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Latest Finish</label>
-                  <input
-                    type="time"
-                    value={latestFinish}
-                    onChange={e => setLatestFinish(e.target.value)}
-                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                  Starting Origin Address
-                </label>
-                <input
-                  type="text"
-                  value={startAddress}
-                  onChange={e => setStartAddress(e.target.value)}
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: AI Document Scanner & Candidate Properties */}
-          <div className="lg:col-span-7 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span>2. CANDIDATE PROPERTIES & LISTINGS</span>
-              </h2>
-
-              {/* 2 Primary Input Mode Tabs: AI Scan (Primary) & Candidate Addresses */}
-              <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] w-full sm:w-auto">
+              {/* 2 Primary Mode Tabs: AI Scan (Primary) & Address List */}
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setInputMode('AI')}
-                  className={`flex-1 sm:flex-none px-3 py-1 rounded font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
                     inputMode === 'AI' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md' : 'text-purple-300 hover:text-white'
                   }`}
                 >
@@ -391,140 +331,311 @@ function NewTourWizardContent() {
                 <button
                   type="button"
                   onClick={() => setInputMode('ADDRESS')}
-                  className={`flex-1 sm:flex-none px-3 py-1 rounded font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
                     inputMode === 'ADDRESS' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Candidate Addresses</span>
+                  <span>Paste Addresses</span>
                 </button>
               </div>
             </div>
 
-            {/* Primary Input Mode 1: AI Scan Scanner */}
+            {/* AI Scan Document & Image Zone */}
             {inputMode === 'AI' && (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="p-5 rounded-2xl bg-slate-950 border-2 border-purple-500/50 space-y-3 text-center shadow-xl">
+              <div className="space-y-4">
+                <div className="p-6 rounded-2xl bg-slate-950 border-2 border-purple-500/50 space-y-3 text-center shadow-xl">
                   <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/40 text-purple-300 mx-auto flex items-center justify-center shadow-lg">
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="font-black text-white text-sm">DeepSeek AI Listing Flyer & Document Scanner</h4>
-                    <p className="text-[11px] text-slate-400 max-w-md mx-auto leading-relaxed">
+                    <h2 className="font-black text-white text-base">DeepSeek AI Listing Flyer & Document Scanner</h2>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
                       Upload property flyers, MLS PDF printouts, or listing screenshots. AI automatically extracts addresses, pricing, specs, listing agent contacts, and Open House dates!
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsAiUploadOpen(true)}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-500 hover:from-purple-500 hover:to-emerald-400 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xl transition-transform active:scale-95 cursor-pointer"
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-500 hover:from-purple-500 hover:to-emerald-400 text-white font-black text-xs inline-flex items-center justify-center gap-2 shadow-xl transition-transform active:scale-95 cursor-pointer"
                   >
                     <UploadCloud className="w-4 h-4 text-purple-200" />
                     <span>Upload Flyer PDF / Image to Scan</span>
                   </button>
                 </div>
 
-                <div className="space-y-1 pt-2 border-t border-slate-800">
-                  <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                  <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
                     <span>Or Paste Candidate Addresses (1 per line)</span>
-                    <span className="text-slate-400 font-normal">Supports 5-12 properties</span>
+                    <span className="text-slate-400 font-normal text-[11px]">Supports 5-12 properties</span>
                   </label>
                   <textarea
                     rows={4}
                     value={bulkAddressInput}
                     onChange={e => setBulkAddressInput(e.target.value)}
                     placeholder="123 Main St, Great Neck, NY&#10;45 Harbor Rd, Manhasset, NY"
-                    className="w-full bg-slate-950 text-slate-200 font-mono text-xs p-3 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
+                    className="w-full bg-slate-950 text-slate-200 font-mono text-xs p-3.5 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
                   />
                 </div>
               </div>
             )}
 
-            {/* Input Mode 2: Candidate Addresses */}
+            {/* Candidate Address Input Mode */}
             {inputMode === 'ADDRESS' && (
-              <div className="space-y-1 animate-fadeIn">
-                <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
                   <span>Paste Candidate Addresses (1 per line)</span>
-                  <span className="text-slate-400 font-normal">Supports 5-12 properties</span>
+                  <span className="text-slate-400 font-normal text-[11px]">Supports 5-12 properties</span>
                 </label>
                 <textarea
                   rows={7}
                   value={bulkAddressInput}
                   onChange={e => setBulkAddressInput(e.target.value)}
                   placeholder="123 Main St, Great Neck, NY&#10;45 Harbor Rd, Manhasset, NY"
-                  className="w-full bg-slate-950 text-slate-200 font-mono text-xs p-3 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
+                  className="w-full bg-slate-950 text-slate-200 font-mono text-xs p-3.5 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
                 />
               </div>
             )}
 
+            {/* Primary Action Button */}
             <button
               disabled={loading}
               onClick={handleProcessBulkInput}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 text-white font-black text-sm flex items-center justify-center gap-2 shadow-2xl transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
             >
-              <span>{loading ? 'Processing Listings...' : 'Process Listings & Proceed'}</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>{loading ? 'Processing Listings...' : 'Create Showing Route →'}</span>
             </button>
+          </div>
+
+          {/* Optional Collapsible Settings Accordion (Date, Time, Starting Origin) */}
+          <div className="rounded-2xl bg-slate-900/60 border border-slate-800 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowSettingsDrawer(!showSettingsDrawer)}
+              className="w-full p-4 flex items-center justify-between text-xs font-bold text-slate-300 hover:text-white transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-indigo-400" />
+                <span>⚙️ Adjust Tour Settings (Optional Overrides)</span>
+              </div>
+              {showSettingsDrawer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showSettingsDrawer && (
+              <div className="p-4 pt-0 border-t border-slate-800/60 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs animate-fadeIn">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-400">Tour Date</label>
+                  <input
+                    type="date"
+                    value={tourDate}
+                    onChange={e => setTourDate(e.target.value)}
+                    className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-400">Earliest Start Time</label>
+                  <input
+                    type="time"
+                    value={earliestStart}
+                    onChange={e => setEarliestStart(e.target.value)}
+                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-400">Latest Finish Time</label>
+                  <input
+                    type="time"
+                    value={latestFinish}
+                    onChange={e => setLatestFinish(e.target.value)}
+                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none"
+                  />
+                </div>
+
+                <div className="md:col-span-3 space-y-1 pt-1">
+                  <label className="text-[11px] font-bold text-slate-400">Starting Origin Address</label>
+                  <input
+                    type="text"
+                    value={startAddress}
+                    onChange={e => setStartAddress(e.target.value)}
+                    className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Step 2 Form */}
-      {step === 2 && (
-        <div className="space-y-4">
-          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Building className="w-4 h-4 text-indigo-400" />
-                <span>Fetched Property Stops ({stops.length})</span>
-              </h3>
-              <button
-                onClick={() => setStep(1)}
-                className="text-xs font-semibold text-indigo-400 hover:underline cursor-pointer"
-              >
-                ← Add More Properties / Documents
-              </button>
+      {/* STAGE 2: Instant Route & Plain-Language Conflicts */}
+      {stage === 2 && savedTour && (
+        <div className="space-y-4 animate-fadeIn">
+          {/* Instant Route Summary Header Banner */}
+          <div className="p-4 rounded-2xl bg-indigo-950/40 border-2 border-indigo-500/80 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-[10px] uppercase border border-emerald-500/30">
+                  Route Optimized
+                </span>
+                <h2 className="text-base font-black text-white tracking-tight">
+                  Your {savedTour.stops.length}-Property Showing Tour is Ready
+                </h2>
+              </div>
+              <div className="text-xs text-indigo-200 font-semibold flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{savedTour.earliest_start || '09:30 AM'} – {savedTour.latest_finish || '16:00 PM'}</span>
+                <span>•</span>
+                <span>{savedTour.stops.length} Stops Feasible</span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {stops.map((stop, idx) => (
-                <div
-                  key={stop.id}
-                  className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs"
+            {/* Primary Action Button: Review & Share */}
+            <button
+              type="button"
+              onClick={() => setStage(3)}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer shrink-0"
+            >
+              <span>Review & Share Tour →</span>
+            </button>
+          </div>
+
+          {/* Timeline & Map Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-7 space-y-3">
+              <TimelineView
+                tour={savedTour}
+                onSelectStop={() => {}}
+                onToggleLock={() => {}}
+                onMoveStop={() => {}}
+                onOpenMessageModal={() => {}}
+                onUpdateStopBuffers={handleUpdateStopBuffers}
+                onUpdateStopPriority={handleUpdateStopPriority}
+                onRemoveStop={handleRemoveStop}
+                onReoptimize={handleReoptimize}
+              />
+            </div>
+
+            <div className="lg:col-span-5 sticky top-16 h-[calc(100vh-8rem)] min-h-[400px]">
+              <MapView tour={savedTour} onSelectStop={() => {}} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STAGE 3: Select Buyer & Dispatch Share */}
+      {stage === 3 && savedTour && (
+        <div className="max-w-[800px] mx-auto space-y-5 animate-fadeIn">
+          <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl space-y-5">
+            <div className="border-b border-slate-800 pb-3">
+              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-indigo-400" />
+                <span>Share Tour with Buyer Client</span>
+              </h2>
+              <p className="text-xs text-slate-400">Assign buyer contact details and dispatch interactive links or PDF itineraries</p>
+            </div>
+
+            {/* Buyer Selection Card */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-indigo-500/30 space-y-3">
+              <label className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-indigo-400" />
+                <span>Select Buyer Client Contact</span>
+              </label>
+
+              <select
+                value={selectedContactId}
+                onChange={e => handleSelectContact(e.target.value)}
+                className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-xl border border-slate-700 focus:outline-none"
+              >
+                <option value="">-- Manual Client Entry --</option>
+                {contacts.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.email})
+                  </option>
+                ))}
+              </select>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <input
+                  type="text"
+                  value={clientDisplayName}
+                  onChange={e => setClientDisplayName(e.target.value)}
+                  placeholder="Buyer Client Name (e.g. Smith Family)"
+                  className="bg-slate-900 text-slate-200 px-3 py-2 rounded-xl border border-slate-800"
+                />
+                <input
+                  type="email"
+                  value={clientEmail}
+                  onChange={e => setClientEmail(e.target.value)}
+                  placeholder="Buyer Client Email"
+                  className="bg-slate-900 text-slate-200 px-3 py-2 rounded-xl border border-slate-800"
+                />
+              </div>
+            </div>
+
+            {/* Dispatch Action Controls */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Dispatch Options</h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Copy Interactive Link */}
+                <button
+                  type="button"
+                  onClick={handleCopyClientLink}
+                  className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-indigo-500/60 text-left space-y-2 group transition-all cursor-pointer"
                 >
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-5 h-5 rounded bg-indigo-600/20 text-indigo-300 text-[11px] font-bold flex items-center justify-center">
-                        #{idx + 1}
-                      </span>
-                      <span className="font-bold text-white truncate max-w-[200px]">{stop.normalized_address}</span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 truncate">
-                      Agent: <strong className="text-slate-200">{stop.listing_agent_name || 'N/A'}</strong> ({stop.listing_brokerage || 'N/A'})
-                    </div>
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
+                    {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                   </div>
+                  <div className="font-bold text-white text-xs">{copiedLink ? 'Link Copied!' : 'Copy Web Link'}</div>
+                  <p className="text-[11px] text-slate-400 leading-tight">Shareable interactive buyer web link</p>
+                </button>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <select
-                      value={stop.priority || 'PREFERRED'}
-                      onChange={e => handleUpdateStopPriority(idx, e.target.value)}
-                      className="bg-slate-900 text-white text-[11px] px-2 py-1 rounded border border-slate-700"
-                    >
-                      <option value="MUST_SEE">⭐ Must See</option>
-                      <option value="PREFERRED">🔹 Preferred</option>
-                      <option value="OPTIONAL">⚪ Optional</option>
-                    </select>
-
-                    <button
-                      onClick={() => handleRemoveStop(idx)}
-                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                      title="Remove Stop"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                {/* 2. Dispatch Email */}
+                <button
+                  type="button"
+                  onClick={() => setIsClientEmailOpen(true)}
+                  className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-indigo-500/60 text-left space-y-2 group transition-all cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center">
+                    <Mail className="w-4 h-4" />
                   </div>
-                </div>
-              ))}
+                  <div className="font-bold text-white text-xs">Email Itinerary</div>
+                  <p className="text-[11px] text-slate-400 leading-tight">Send formatted showing schedule via email</p>
+                </button>
+
+                {/* 3. Print / PDF */}
+                <Link
+                  href={`/tours/${savedTour.id}/print`}
+                  target="_blank"
+                  className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-indigo-500/60 text-left space-y-2 group transition-all"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Printer className="w-4 h-4" />
+                  </div>
+                  <div className="font-bold text-white text-xs">Print / PDF</div>
+                  <p className="text-[11px] text-slate-400 leading-tight">High-res printable showing sheet</p>
+                </Link>
+              </div>
+            </div>
+
+            {/* Direct Link to Full Workspace Page */}
+            <div className="pt-3 border-t border-slate-800 flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => setStage(2)}
+                className="text-xs font-semibold text-slate-400 hover:text-white"
+              >
+                ← Back to Route View
+              </button>
+
+              <Link
+                href={`/tours/${savedTour.id}`}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow"
+              >
+                <span>Open Full Tour Workspace</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>
@@ -536,6 +647,15 @@ function NewTourWizardContent() {
         onClose={() => setIsAiUploadOpen(false)}
         onAddExtractedStops={handleAddExtractedStops}
       />
+
+      {/* Client Email Modal */}
+      {savedTour && (
+        <ClientEmailModal
+          tour={savedTour}
+          isOpen={isClientEmailOpen}
+          onClose={() => setIsClientEmailOpen(false)}
+        />
+      )}
     </div>
   );
 }
