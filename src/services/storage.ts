@@ -188,20 +188,46 @@ export const INITIAL_SEED_TOURS: Tour[] = [
   }
 ];
 
+export function isTourPastFinish(tour: Tour): boolean {
+  if (!tour.tour_date) return false;
+  const finishTimeStr = tour.latest_finish || '23:59';
+  const tourFinishDateTime = new Date(`${tour.tour_date}T${finishTimeStr}:00`);
+  if (isNaN(tourFinishDateTime.getTime())) {
+    const endOfDay = new Date(`${tour.tour_date}T23:59:59`);
+    return new Date() > endOfDay;
+  }
+  return new Date() > tourFinishDateTime;
+}
+
 // --- TOUR MANAGEMENT ---
 export function getToursFromStorage(): Tour[] {
   if (typeof window === 'undefined') return INITIAL_SEED_TOURS;
   const raw = localStorage.getItem(STORAGE_KEY_TOURS);
+  let tours: Tour[];
   if (!raw) {
-    const initialized = INITIAL_SEED_TOURS.map(t => optimizeTourSchedule(t).updatedTour);
-    localStorage.setItem(STORAGE_KEY_TOURS, JSON.stringify(initialized));
-    return initialized;
+    tours = INITIAL_SEED_TOURS.map(t => optimizeTourSchedule(t).updatedTour);
+  } else {
+    try {
+      tours = JSON.parse(raw);
+    } catch (e) {
+      tours = INITIAL_SEED_TOURS;
+    }
   }
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    return INITIAL_SEED_TOURS;
+
+  let updatedAny = false;
+  tours = tours.map(t => {
+    if (t.status !== 'COMPLETED' && isTourPastFinish(t)) {
+      updatedAny = true;
+      return { ...t, status: 'COMPLETED' };
+    }
+    return t;
+  });
+
+  if (updatedAny || !raw) {
+    localStorage.setItem(STORAGE_KEY_TOURS, JSON.stringify(tours));
   }
+
+  return tours;
 }
 
 export function saveToursToStorage(tours: Tour[]): void {

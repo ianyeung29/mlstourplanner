@@ -30,10 +30,19 @@ function LandingPageContent() {
   const [isRedirectingCheckout, setIsRedirectingCheckout] = React.useState(false);
 
   React.useEffect(() => {
-    if (searchParams.get('auth') === 'required' || searchParams.get('auth') === 'open') {
+    const user = getUserProfile();
+    const isLoggedIn = !!user && !!user.email && !!user.id;
+    const isAuthRequired = searchParams.get('auth') === 'required' || searchParams.get('auth') === 'open';
+
+    if (isLoggedIn && !isAuthRequired) {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (isAuthRequired) {
       triggerAuthModal();
     }
-  }, [searchParams]);
+  }, [router, searchParams]);
 
   const handleOpenAuth = (e: React.MouseEvent) => {
     e.preventDefault();

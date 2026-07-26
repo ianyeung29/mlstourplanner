@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
 import { Tour, UserProfile } from '@/types/tour';
@@ -15,21 +15,29 @@ import {
   Trash2,
   Crown,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  History,
+  Archive
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const [tours, setTours] = React.useState<Tour[]>([]);
-  const [filter, setFilter] = React.useState<'ALL' | 'ACTIVE' | 'CONFIRMED' | 'COMPLETED'>('ALL');
-  const [profile, setProfile] = React.useState<UserProfile>(getUserProfile());
-  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'CONFIRMED' | 'COMPLETED'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isHistoryFolded, setIsHistoryFolded] = useState(true);
+  const [profile, setProfile] = useState<UserProfile>(getUserProfile());
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isRedirectingCheckout, setIsRedirectingCheckout] = useState(false);
 
-  const loadDashboard = React.useCallback(() => {
+  const loadDashboard = useCallback(() => {
     setTours(getToursFromStorage());
     setProfile(getUserProfile());
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadDashboard();
 
     const handleProfileUpdate = () => loadDashboard();
@@ -57,8 +65,6 @@ export default function DashboardPage() {
     loadDashboard();
   };
 
-  const [isRedirectingCheckout, setIsRedirectingCheckout] = React.useState(false);
-
   const handleUpgrade = async () => {
     setIsRedirectingCheckout(true);
     try {
@@ -85,12 +91,28 @@ export default function DashboardPage() {
     }
   };
 
-  const filteredTours = tours.filter(t => {
-    if (filter === 'ACTIVE') return t.status === 'DRAFT' || t.status === 'REQUESTING' || t.status === 'PLANNED';
-    if (filter === 'CONFIRMED') return t.status === 'CONFIRMED' || t.status === 'PARTIALLY_CONFIRMED';
-    if (filter === 'COMPLETED') return t.status === 'COMPLETED';
-    return true;
+  // Search & Filter Logic
+  const searchedTours = tours.filter(t => {
+    // Tab Filter
+    if (filter === 'ACTIVE' && (t.status === 'COMPLETED')) return false;
+    if (filter === 'CONFIRMED' && t.status !== 'CONFIRMED' && t.status !== 'PARTIALLY_CONFIRMED') return false;
+    if (filter === 'COMPLETED' && t.status !== 'COMPLETED') return false;
+
+    // Search Query (Tour name, client name/email, notes, or property address/MLS)
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const nameMatch = t.name.toLowerCase().includes(q);
+    const clientMatch = (t.client_display_name || '').toLowerCase().includes(q) || (t.client_email || '').toLowerCase().includes(q);
+    const notesMatch = (t.notes || '').toLowerCase().includes(q);
+    const stopsMatch = t.stops.some(s =>
+      s.normalized_address.toLowerCase().includes(q) ||
+      (s.mls_number || '').toLowerCase().includes(q)
+    );
+    return nameMatch || clientMatch || notesMatch || stopsMatch;
   });
+
+  const activeTours = searchedTours.filter(t => t.status !== 'COMPLETED');
+  const completedTours = searchedTours.filter(t => t.status === 'COMPLETED');
 
   const totalConfirmedStops = tours.reduce(
     (acc, t) => acc + t.stops.filter(s => s.appointment_status === 'CONFIRMED').length,
@@ -101,9 +123,73 @@ export default function DashboardPage() {
   const isPro = profile.subscription_tier === 'PAID_PRO';
   const toursUsed = tours.length;
 
+  const renderTourCard = (t: Tour) => (
+    <div
+      key={t.id}
+      className="group p-4 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3 shadow-md"
+    >
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-bold text-white text-sm tracking-tight truncate group-hover:text-indigo-400 transition-colors">
+            {t.name}
+          </h3>
+          <StatusBadge status={t.status} type="tour" size="sm" />
+        </div>
+
+        <div className="space-y-1 text-xs text-slate-300 font-medium">
+          {t.client_display_name && (
+            <div>Client: <strong className="text-slate-100">{t.client_display_name}</strong></div>
+          )}
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+            <span>{t.tour_date}</span>
+            <span>•</span>
+            <Clock className="w-3.5 h-3.5 text-indigo-400" />
+            <span>{t.earliest_start} – {t.latest_finish}</span>
+          </div>
+        </div>
+
+        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px] flex items-center justify-between">
+          <span className="text-slate-400 font-semibold">{t.stops.length} Property Stops</span>
+          <span className="text-emerald-400 font-bold">
+            {t.stops.filter(s => s.appointment_status === 'CONFIRMED').length} Confirmed
+          </span>
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={(e) => handleDuplicate(t.id, e)}
+            title="Duplicate Tour"
+            className="p-1.5 text-slate-400 hover:text-indigo-300 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => handleDelete(t.id, t.name, e)}
+            title="Delete Tour"
+            className="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <Link
+          href={`/tours/${t.id}`}
+          className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 shadow transition-colors"
+        >
+          <span>Open Workspace</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+    </div>
+  );
+
   return (
     <AuthGuard>
-      <div className="space-y-4 max-w-[1600px] mx-auto">
+      <div className="space-y-4 max-w-[1600px] mx-auto font-sans pb-8">
         {/* Workspace Dashboard Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div>
@@ -154,7 +240,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 4-Metric Bar (2x2 on Mobile, 1x4 on Desktop) */}
+        {/* 4-Metric Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
             <div className="text-[11px] text-slate-400 font-medium">Total Tours</div>
@@ -174,101 +260,95 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Tour List Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
-          <div className="flex items-center space-x-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs font-semibold">
-            {(['ALL', 'ACTIVE', 'CONFIRMED', 'COMPLETED'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-md transition-colors ${
-                  filter === f ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {f === 'ALL' ? 'All Tours' : f}
-              </button>
-            ))}
+        {/* Search Bar & Tour List Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs font-semibold">
+              {(['ALL', 'ACTIVE', 'CONFIRMED', 'COMPLETED'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
+                    filter === f ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {f === 'ALL' ? 'All Tours' : f}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <span className="text-xs text-slate-400 font-medium">
-            Showing {filteredTours.length} of {tours.length} tours
-          </span>
+          {/* Search Bar Input */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search tours by name, client, address, or MLS #..."
+              className="w-full bg-slate-900 text-white text-xs pl-9 pr-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500 placeholder:text-slate-500"
+            />
+          </div>
         </div>
 
-        {/* 3-Column Desktop Tour Cards Grid */}
-        {filteredTours.length === 0 ? (
+        {/* Tour List Results */}
+        {searchedTours.length === 0 ? (
           <div className="p-12 text-center bg-slate-900/50 rounded-2xl border border-slate-800 space-y-3">
             <Calendar className="w-8 h-8 text-slate-600 mx-auto" />
-            <div className="text-sm font-bold text-white">No tours found</div>
+            <div className="text-sm font-bold text-white">No matching tours found</div>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Click "+ New Tour" to build your first multi-listing showing itinerary.
+              {searchQuery ? `No tours match "${searchQuery}". Try clearing your search.` : 'Click "+ New Tour" to build your first showing itinerary.'}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTours.map(t => (
-              <div
-                key={t.id}
-                className="group p-4 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3 shadow-md"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold text-white text-sm tracking-tight truncate group-hover:text-indigo-400 transition-colors">
-                      {t.name}
-                    </h3>
-                    <StatusBadge status={t.status} type="tour" size="sm" />
-                  </div>
-
-                  <div className="space-y-1 text-xs text-slate-300 font-medium">
-                    {t.client_display_name && (
-                      <div>Client: <strong className="text-slate-100">{t.client_display_name}</strong></div>
-                    )}
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                      <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>{t.tour_date}</span>
-                      <span>•</span>
-                      <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>{t.earliest_start} – {t.latest_finish}</span>
-                    </div>
-                  </div>
-
-                  <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px] flex items-center justify-between">
-                    <span className="text-slate-400 font-semibold">{t.stops.length} Property Stops</span>
-                    <span className="text-emerald-400 font-bold">
-                      {t.stops.filter(s => s.appointment_status === 'CONFIRMED').length} Confirmed
-                    </span>
-                  </div>
+          <div className="space-y-6">
+            {/* Active / Upcoming Showing Tours Section */}
+            {activeTours.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-emerald-400" />
+                    <span>Active & Upcoming Showing Tours ({activeTours.length})</span>
+                  </h2>
                 </div>
 
-                {/* Footer Actions */}
-                <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={(e) => handleDuplicate(t.id, e)}
-                      title="Duplicate Tour"
-                      className="p-1.5 text-slate-400 hover:text-indigo-300 rounded hover:bg-slate-800 transition-colors"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(t.id, t.name, e)}
-                      title="Delete Tour"
-                      className="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <Link
-                    href={`/tours/${t.id}`}
-                    className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 shadow transition-colors"
-                  >
-                    <span>Open Workspace</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeTours.map(renderTourCard)}
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Folded / Collapsible Completed Past Tour History Section */}
+            {completedTours.length > 0 && (
+              <div className="space-y-3 pt-2 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryFolded(!isHistoryFolded)}
+                  className="w-full p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-left flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center space-x-2">
+                    <History className="w-4 h-4 text-indigo-400" />
+                    <span className="text-xs font-bold text-white">
+                      Folded Past Tour History ({completedTours.length} Completed)
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">
+                      Auto-Completed
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-1 text-xs text-indigo-400 font-semibold">
+                    <span>{isHistoryFolded ? 'Expand History' : 'Fold / Collapse'}</span>
+                    {isHistoryFolded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                  </div>
+                </button>
+
+                {!isHistoryFolded && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1 animate-fadeIn">
+                    {completedTours.map(renderTourCard)}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
