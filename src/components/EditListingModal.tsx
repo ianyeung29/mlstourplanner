@@ -83,28 +83,28 @@ export default function EditListingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <form onSubmit={handleSubmit} className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+      <form onSubmit={handleSubmit} className="relative w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-xs">
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Edit3 className="w-4 h-4 text-indigo-400" />
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Edit3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Edit Property Listing Information</span>
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-5 overflow-y-auto space-y-4 bg-slate-950">
+        <div className="p-5 overflow-y-auto space-y-4 bg-white dark:bg-slate-950">
           {/* Address */}
           <div className="space-y-1">
-            <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+            <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               Property Address
             </label>
             <input
@@ -113,15 +113,15 @@ export default function EditListingModal({
               value={address}
               onChange={e => setAddress(e.target.value)}
               placeholder="e.g. 31 Yale St, Garden City, NY 11530"
-              className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           {/* Price & Specs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="space-y-1">
-              <label className="font-semibold text-slate-300 flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 List Price ($)
               </label>
               <input
@@ -129,13 +129,13 @@ export default function EditListingModal({
                 value={listPrice}
                 onChange={e => setListPrice(e.target.value)}
                 placeholder="1399000"
-                className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-semibold text-slate-300 flex items-center gap-1">
-                <Bed className="w-3.5 h-3.5 text-indigo-400" />
+              <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <Bed className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 Beds
               </label>
               <input
@@ -143,13 +143,13 @@ export default function EditListingModal({
                 value={beds}
                 onChange={e => setBeds(e.target.value)}
                 placeholder="3"
-                className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-semibold text-slate-300 flex items-center gap-1">
-                <Bath className="w-3.5 h-3.5 text-indigo-400" />
+              <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <Bath className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 Baths
               </label>
               <input
@@ -158,13 +158,13 @@ export default function EditListingModal({
                 value={baths}
                 onChange={e => setBathsNum(e.target.value)}
                 placeholder="2"
-                className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-semibold text-slate-300 flex items-center gap-1">
-                <Home className="w-3.5 h-3.5 text-indigo-400" />
+              <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <Home className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 Sqft
               </label>
               <input
@@ -172,15 +172,15 @@ export default function EditListingModal({
                 value={sqft}
                 onChange={e => setSqft(e.target.value)}
                 placeholder="1792"
-                className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
               />
             </div>
           </div>
 
           {/* Photo Image URL */}
           <div className="space-y-1">
-            <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
+            <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
               Listing Photo URL
             </label>
             <input
@@ -188,19 +188,19 @@ export default function EditListingModal({
               value={imageUrl}
               onChange={e => setImageUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+              className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
             />
           </div>
 
           {/* Open House Window Toggle */}
-          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
-              <label className="font-bold text-amber-300 flex items-center gap-1.5 cursor-pointer">
+              <label className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={hasOpenHouse}
                   onChange={e => setHasOpenHouse(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500/50"
+                  className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-amber-500 focus:ring-amber-500/50"
                 />
                 <span>Has Open House Schedule</span>
               </label>
@@ -209,32 +209,32 @@ export default function EditListingModal({
             {hasOpenHouse && (
               <div className="space-y-2 pt-1">
                 <div className="space-y-1">
-                  <label className="text-[11px] text-slate-400 font-medium">Open House Date / Day</label>
+                  <label className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Open House Date / Day</label>
                   <input
                     type="text"
                     value={ohDate}
                     onChange={e => setOhDate(e.target.value)}
                     placeholder="e.g. Saturday, Sunday, 07/26, or Saturday 7/26"
-                    className="w-full bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded border border-slate-800 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-amber-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] text-slate-400 font-medium">Open House Start</label>
+                    <label className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Open House Start</label>
                     <input
                       type="time"
                       value={ohStart}
                       onChange={e => setOhStart(e.target.value)}
-                      className="w-full bg-slate-950 text-white text-xs px-2 py-1.5 rounded border border-slate-800 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-2 py-1.5 rounded border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-amber-500"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] text-slate-400 font-medium">Open House End</label>
+                    <label className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Open House End</label>
                     <input
                       type="time"
                       value={ohEnd}
                       onChange={e => setOhEnd(e.target.value)}
-                      className="w-full bg-slate-950 text-white text-xs px-2 py-1.5 rounded border border-slate-800 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-2 py-1.5 rounded border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-amber-500"
                     />
                   </div>
                 </div>
@@ -243,51 +243,51 @@ export default function EditListingModal({
           </div>
 
           {/* Listing Agent Specs */}
-          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-            <h4 className="font-bold text-slate-200">Listing Agent Contact Details</h4>
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+            <h4 className="font-bold text-slate-800 dark:text-slate-200">Listing Agent Contact Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-[11px] text-slate-400">Listing Agent Name</label>
+                <label className="text-[11px] text-slate-600 dark:text-slate-400">Listing Agent Name</label>
                 <input
                   type="text"
                   value={agentName}
                   onChange={e => setAgentName(e.target.value)}
                   placeholder="N/A"
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded border border-slate-800 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-slate-400">Brokerage</label>
+                <label className="text-[11px] text-slate-600 dark:text-slate-400">Brokerage</label>
                 <input
                   type="text"
                   value={brokerage}
                   onChange={e => setBrokerage(e.target.value)}
                   placeholder="Howard Hanna Coach"
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded border border-slate-800 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-slate-400">Agent Phone</label>
+                <label className="text-[11px] text-slate-600 dark:text-slate-400">Agent Phone</label>
                 <input
                   type="text"
                   value={agentPhone}
                   onChange={e => setAgentPhone(e.target.value)}
                   placeholder="(516) 555-0188"
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded border border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                  className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-slate-400">Agent Email</label>
+                <label className="text-[11px] text-slate-600 dark:text-slate-400">Agent Email</label>
                 <input
                   type="email"
                   value={agentEmail}
                   onChange={e => setAgentEmail(e.target.value)}
                   placeholder="vvance@example.com"
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-1.5 rounded border border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                  className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
                 />
               </div>
             </div>
@@ -295,8 +295,8 @@ export default function EditListingModal({
 
           {/* Showing Notes */}
           <div className="space-y-1">
-            <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-indigo-400" />
+            <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               Agent Showing Notes & Lockbox Access
             </label>
             <textarea
@@ -304,24 +304,24 @@ export default function EditListingModal({
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="e.g. Call listing agent 15 mins prior. Lockbox on side porch."
-              className="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 flex justify-end gap-2 bg-slate-900">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-slate-50 dark:bg-slate-900">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 transition-colors"
+            className="px-3.5 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isGeocoding}
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1.5 shadow transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1.5 shadow transition-colors disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isGeocoding ? 'Geocoding & Saving...' : 'Save Listing Details'}</span>

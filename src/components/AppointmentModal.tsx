@@ -51,37 +51,37 @@ export default function AppointmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
           <div>
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               Showing Request & Status
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5 max-w-md truncate">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 max-w-md truncate">
               {stop.normalized_address}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white dark:bg-slate-900">
           {/* Channel Tabs */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
             <button
               onClick={() => setChannel('SMS')}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 channel === 'SMS'
                   ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <MessageSquare className="w-4 h-4" />
@@ -89,10 +89,10 @@ export default function AppointmentModal({
             </button>
             <button
               onClick={() => setChannel('EMAIL')}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 channel === 'EMAIL'
                   ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Mail className="w-4 h-4" />
@@ -102,8 +102,8 @@ export default function AppointmentModal({
 
           {/* Draft Message Editor */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">Ready-to-Copy Draft Message</span>
+            <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Ready-to-Copy Draft Message</span>
               <span>{draftText.length} characters</span>
             </div>
             <div className="relative">
@@ -111,11 +111,11 @@ export default function AppointmentModal({
                 rows={6}
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
-                className="w-full bg-slate-950 text-slate-200 text-sm font-sans p-4 rounded-2xl border border-slate-800 focus:outline-none focus:border-indigo-500 transition-colors leading-relaxed resize-none"
+                className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 text-sm font-sans p-4 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 transition-colors leading-relaxed resize-none"
               />
               <button
                 onClick={handleCopy}
-                className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg transition-transform active:scale-95"
+                className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg transition-transform active:scale-95 cursor-pointer"
               >
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? 'Copied!' : 'Copy to Clipboard'}</span>
@@ -124,21 +124,21 @@ export default function AppointmentModal({
           </div>
 
           {/* Update Appointment Status Actions */}
-          <div className="pt-4 border-t border-slate-800 space-y-3">
-            <label className="text-xs font-semibold text-slate-300 block uppercase tracking-wider">
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block uppercase tracking-wider">
               Record Listing Agent Response
             </label>
 
             {/* Confirmed time input */}
-            <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
-              <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="text-xs font-medium text-slate-300">Confirmed Start Time:</span>
+            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Confirmed Start Time:</span>
               <input
                 type="text"
                 value={confirmedTimeInput}
                 onChange={(e) => setConfirmedTimeInput(e.target.value)}
                 placeholder="e.g. 10:30 AM"
-                className="bg-slate-900 border border-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl focus:outline-none focus:border-emerald-500 w-32"
+                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-xl focus:outline-none focus:border-emerald-500 w-32"
               />
             </div>
 
@@ -148,9 +148,9 @@ export default function AppointmentModal({
                   onUpdateStatus(stop.id, 'CONFIRMED', confirmedTimeInput);
                   onClose();
                 }}
-                className="px-3 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                className="px-3 py-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Confirm Time</span>
               </button>
 
@@ -159,9 +159,9 @@ export default function AppointmentModal({
                   onUpdateStatus(stop.id, 'REQUESTED');
                   onClose();
                 }}
-                className="px-3 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                className="px-3 py-2.5 rounded-xl bg-blue-100 dark:bg-blue-600/20 hover:bg-blue-600/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <Clock className="w-4 h-4 text-blue-400" />
+                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>Mark Requested</span>
               </button>
 
@@ -170,9 +170,9 @@ export default function AppointmentModal({
                   onUpdateStatus(stop.id, 'ALTERNATE_PROPOSED');
                   onClose();
                 }}
-                className="px-3 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                className="px-3 py-2.5 rounded-xl bg-amber-100 dark:bg-amber-600/20 hover:bg-amber-600/30 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <AlertCircle className="w-4 h-4 text-amber-400" />
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <span>Alt Offered</span>
               </button>
 
@@ -181,9 +181,9 @@ export default function AppointmentModal({
                   onUpdateStatus(stop.id, 'DECLINED');
                   onClose();
                 }}
-                className="px-3 py-2.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                className="px-3 py-2.5 rounded-xl bg-rose-100 dark:bg-rose-600/20 hover:bg-rose-600/30 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <XCircle className="w-4 h-4 text-rose-400" />
+                <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 <span>Declined</span>
               </button>
             </div>
