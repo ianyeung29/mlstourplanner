@@ -88,8 +88,8 @@ export default function TimelineView({
   const outsideWindowStops: Array<{ stop: TourStop; origIdx: number }> = [];
 
   tour.stops.forEach((stop, idx) => {
-    const depMins = parseTimeToMins(stop.planned_departure);
-    if (depMins > 0 && depMins > tourFinishMins) {
+    const arrMins = parseTimeToMins(stop.planned_arrival);
+    if (tourFinishMins > 0 && arrMins > tourFinishMins) {
       outsideWindowStops.push({ stop, origIdx: idx });
     } else {
       withinWindowStops.push({ stop, origIdx: idx });
@@ -126,9 +126,9 @@ export default function TimelineView({
         {/* Inter-Stop Drive Time Connector Badge */}
         {idx > 0 && (
           <div className="flex items-center justify-center py-1">
-            <div className="px-3.5 py-1 rounded-full bg-slate-900 border border-indigo-500/50 text-indigo-300 font-extrabold text-[11px] flex items-center gap-1.5 shadow-lg animate-fadeIn">
-              <Car className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span>Drive to Stop #{idx + 1}: <strong className="text-white">{driveMins} mins</strong> ({driveMiles} miles)</span>
+            <div className="px-3.5 py-1 rounded-full bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-500/50 text-indigo-700 dark:text-indigo-300 font-extrabold text-[11px] flex items-center gap-1.5 shadow-md animate-fadeIn">
+              <Car className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span>Drive to Stop #{idx + 1}: <strong className="text-slate-900 dark:text-white">{driveMins} mins</strong> ({driveMiles} miles)</span>
             </div>
           </div>
         )}
@@ -139,19 +139,19 @@ export default function TimelineView({
           onMouseLeave={() => onHoverStop?.(undefined)}
           className={`group relative p-3 rounded-xl border transition-all cursor-pointer space-y-2 ${
             isHovered
-              ? 'bg-slate-900 border-indigo-400 ring-2 ring-indigo-400/80 shadow-2xl scale-[1.01]'
+              ? 'bg-indigo-50/50 dark:bg-slate-900 border-indigo-500 dark:border-indigo-400 ring-2 ring-indigo-500/80 shadow-2xl scale-[1.01]'
               : isOutside
-                ? 'bg-rose-950/30 border-rose-500/70 hover:border-rose-400'
+                ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-400 dark:border-rose-500/70 hover:border-rose-500'
                 : isSelected
-                  ? 'bg-slate-900 border-indigo-500 ring-1 ring-indigo-500/50 shadow-lg'
-                  : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                  ? 'bg-indigo-50/60 dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 ring-1 ring-indigo-500/50 shadow-lg'
+                  : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900'
           }`}
         >
           <div className="space-y-2.5">
             {/* Top Row: Thumbnail + Full Width Property Details */}
             <div className="flex items-start space-x-3">
               {/* Primary Property Image Thumbnail */}
-              <div className="relative w-16 h-14 rounded-lg overflow-hidden bg-slate-950 shrink-0 border border-slate-800">
+              <div className="relative w-16 h-14 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 border border-slate-200 dark:border-slate-800">
                 {stop.image_url ? (
                   <img
                     src={stop.image_url}
@@ -159,18 +159,18 @@ export default function TimelineView({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">
+                  <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
                     No Image
                   </div>
                 )}
-                <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded bg-indigo-600/90 text-white font-bold text-[10px] flex items-center justify-center shadow">
+                <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shadow">
                   #{idx + 1}
                 </span>
               </div>
 
               {/* Property Details */}
               <div className="space-y-1 min-w-0 flex-1">
-                <h4 className="text-xs font-black text-white leading-snug break-words">
+                <h4 className="text-xs font-black text-slate-900 dark:text-white leading-snug break-words">
                   {stop.normalized_address}
                 </h4>
 
@@ -184,23 +184,23 @@ export default function TimelineView({
                     title="Change Property Priority"
                     className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border cursor-pointer focus:outline-none transition-colors ${
                       stop.priority === 'MUST_SEE'
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                        ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
                         : stop.priority === 'PREFERRED'
-                          ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-500/30'
-                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                          ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500/40'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
                     }`}
                   >
-                    <option value="MUST_SEE" className="bg-slate-900 text-amber-300 font-bold">⭐ Must See</option>
-                    <option value="PREFERRED" className="bg-slate-900 text-indigo-300 font-bold">🔹 Preferred</option>
-                    <option value="OPTIONAL" className="bg-slate-900 text-slate-300 font-bold">⚪ Optional</option>
+                    <option value="MUST_SEE" className="bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-300 font-bold">⭐ Must See</option>
+                    <option value="PREFERRED" className="bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-300 font-bold">🔹 Preferred</option>
+                    <option value="OPTIONAL" className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold">⚪ Optional</option>
                   </select>
 
                   {isOutside && (
                     <span
                       title={`Estimated arrival (${stop.planned_arrival || 'TBD'}) exceeds tour latest finish constraint of ${tour.latest_finish || '16:00 PM'}`}
-                      className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold flex items-center gap-1 cursor-help"
+                      className="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold flex items-center gap-1 cursor-help"
                     >
-                      <AlertTriangle className="w-3 h-3 text-rose-400" />
+                      <AlertTriangle className="w-3 h-3 text-rose-500 dark:text-rose-400" />
                       <span>Exceeds {tour.latest_finish || 'Finish'} Window</span>
                     </span>
                   )}
@@ -209,18 +209,18 @@ export default function TimelineView({
                 {/* Price & Bed/Bath Specs */}
                 <div className="flex flex-wrap items-center gap-2 text-[11px] pt-0.5">
                   {stop.list_price && (
-                    <span className="font-extrabold text-emerald-400">
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
                       ${stop.list_price.toLocaleString()}
                     </span>
                   )}
                   {(stop.beds || stop.baths) && (
-                    <span className="text-slate-300 font-semibold flex items-center gap-1">
-                      <Bed className="w-3 h-3 text-indigo-400" />
+                    <span className="text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1">
+                      <Bed className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                       {stop.beds || 0} Bed, {stop.baths || 0} Bath
                     </span>
                   )}
                   {stop.sqft && (
-                    <span className="text-slate-400">
+                    <span className="text-slate-500 dark:text-slate-400">
                       ({stop.sqft.toLocaleString()} sqft)
                     </span>
                   )}
@@ -229,35 +229,35 @@ export default function TimelineView({
                 {/* Open House Auto-Arrangement Badge */}
                 {hasOpenHouse && (
                   isOpenHouseOnTourDate(stop, tour.tour_date) ? (
-                    <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold shadow-sm leading-tight mt-1">
-                      <Home className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 text-[10px] font-extrabold shadow-sm leading-tight mt-1">
+                      <Home className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                       <span>Open House {stop.open_house_date ? `${stop.open_house_date} ` : ''}{stop.open_house_start || '11:00'} - {stop.open_house_end || '13:00'} (No Appointment Needed)</span>
                     </div>
                   ) : (
-                    <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold shadow-sm leading-tight mt-1">
-                      <Home className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 text-[10px] font-bold shadow-sm leading-tight mt-1">
+                      <Home className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                       <span>Open House is on {stop.open_house_date || 'different day'} — Appointment Required</span>
                     </div>
                   )
                 )}
 
                 {/* Listing Agent Contact */}
-                <div className="text-[10px] text-slate-400 truncate pt-0.5">
-                  Agent: <strong className="text-slate-200">{stop.listing_agent_name || 'N/A'}</strong> ({stop.listing_brokerage || 'N/A'})
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate pt-0.5">
+                  Agent: <strong className="text-slate-800 dark:text-slate-200">{stop.listing_agent_name || 'N/A'}</strong> ({stop.listing_brokerage || 'N/A'})
                 </div>
               </div>
             </div>
 
             {/* Dedicated Action Toolbar Row (Full width below property details) */}
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1 overflow-x-auto text-[11px]" onClick={e => e.stopPropagation()}>
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-1 overflow-x-auto text-[11px]" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => onOpenEditListingModal?.(stop)}
                   title="Edit Property Info"
-                  className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
                 >
-                  <Edit3 className="w-3 h-3 text-indigo-400" />
+                  <Edit3 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                   <span>Edit</span>
                 </button>
 
@@ -267,11 +267,11 @@ export default function TimelineView({
                   title={isLocked ? "Unlock Stop Order" : "Lock Stop Order"}
                   className={`px-2 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
                     isLocked
-                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                      ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 border-amber-300 dark:border-amber-500/40'
+                      : 'bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {isLocked ? <Lock className="w-3 h-3 text-amber-400" /> : <Unlock className="w-3 h-3" />}
+                  {isLocked ? <Lock className="w-3 h-3 text-amber-600 dark:text-amber-400" /> : <Unlock className="w-3 h-3" />}
                   <span>{isLocked ? 'Locked' : 'Lock'}</span>
                 </button>
 
@@ -279,9 +279,9 @@ export default function TimelineView({
                   type="button"
                   onClick={() => onOpenAgentEmailModal?.(stop)}
                   title="Email Listing Agent Appointment Request"
-                  className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-indigo-300 border border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
                 >
-                  <Mail className="w-3 h-3 text-indigo-400" />
+                  <Mail className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                   <span>Email</span>
                 </button>
 
@@ -289,9 +289,9 @@ export default function TimelineView({
                   type="button"
                   onClick={() => onOpenMessageModal(stop)}
                   title="Showing Assistant Notes"
-                  className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-purple-300 border border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-800 text-purple-700 dark:text-purple-300 border border-slate-200 dark:border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
                 >
-                  <MessageSquare className="w-3 h-3 text-purple-400" />
+                  <MessageSquare className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                   <span>Notes</span>
                 </button>
 
@@ -304,7 +304,7 @@ export default function TimelineView({
                       }
                     }}
                     title="Remove Listing from Itinerary"
-                    className="p-1 rounded-lg bg-slate-950 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-800 transition-colors cursor-pointer"
+                    className="p-1 rounded-lg bg-slate-100 dark:bg-slate-950 hover:bg-rose-600 text-slate-500 hover:text-white border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -312,12 +312,12 @@ export default function TimelineView({
               </div>
 
               {/* Up / Down Reorder Buttons */}
-              <div className="flex items-center gap-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+              <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   disabled={idx === 0}
                   onClick={() => onMoveStop(idx, 'up')}
-                  className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                  className="p-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 cursor-pointer"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
                 </button>
@@ -325,7 +325,7 @@ export default function TimelineView({
                   type="button"
                   disabled={idx === tour.stops.length - 1}
                   onClick={() => onMoveStop(idx, 'down')}
-                  className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                  className="p-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 cursor-pointer"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
@@ -333,42 +333,42 @@ export default function TimelineView({
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-400 font-medium">
-            <div className={`flex items-center gap-1.5 font-bold ${isOutside ? 'text-rose-300' : 'text-indigo-300'}`}>
-              <Clock className={`w-3 h-3 ${isOutside ? 'text-rose-400' : 'text-indigo-400'}`} />
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+            <div className={`flex items-center gap-1.5 font-bold ${isOutside ? 'text-rose-700 dark:text-rose-300' : 'text-indigo-700 dark:text-indigo-300'}`}>
+              <Clock className={`w-3 h-3 ${isOutside ? 'text-rose-500 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
               <span>Time: {stop.planned_arrival || 'TBD'} – {stop.planned_departure || 'TBD'}</span>
             </div>
 
             <div className="flex items-center justify-between sm:justify-end space-x-3 text-[10px]" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center space-x-1 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                <span className="text-slate-400">Visit:</span>
+              <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Visit:</span>
                 <button
                   onClick={() => handleVisitChange(-5)}
-                  className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold"
+                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
                 >
                   -
                 </button>
-                <span className="font-bold text-white px-0.5">{stop.visit_minutes}m</span>
+                <span className="font-bold text-slate-900 dark:text-white px-0.5">{stop.visit_minutes}m</span>
                 <button
                   onClick={() => handleVisitChange(5)}
-                  className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold"
+                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
                 >
                   +
                 </button>
               </div>
 
-              <div className="flex items-center space-x-1 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                <span className="text-slate-400">Buffer:</span>
+              <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Buffer:</span>
                 <button
                   onClick={() => handleBufferChange(-5)}
-                  className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold"
+                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
                 >
                   -
                 </button>
-                <span className="font-bold text-white px-0.5">{stop.travel_buffer_minutes}m</span>
+                <span className="font-bold text-slate-900 dark:text-white px-0.5">{stop.travel_buffer_minutes}m</span>
                 <button
                   onClick={() => handleBufferChange(5)}
-                  className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold"
+                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
                 >
                   +
                 </button>
@@ -382,16 +382,16 @@ export default function TimelineView({
 
   return (
     <div className="space-y-4">
-      {/* 🔹 Blue Box Container: Property Stops Within Expected Tour Window */}
-      <div className="p-4 rounded-2xl bg-indigo-950/20 border-2 border-indigo-500/80 shadow-xl space-y-3">
-        <div className="flex items-center justify-between border-b border-indigo-500/30 pb-2">
+      {/* 🔹 Container: Property Stops Within Expected Tour Window */}
+      <div className="p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/20 border-2 border-indigo-300 dark:border-indigo-500/80 shadow-md space-y-3">
+        <div className="flex items-center justify-between border-b border-indigo-200 dark:border-indigo-500/30 pb-2">
           <div className="flex items-center space-x-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse" />
-            <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-pulse" />
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
               <span>Expected Tour Time Window ({tour.earliest_start || '09:30 AM'} – {tour.latest_finish || '16:00 PM'})</span>
             </h3>
           </div>
-          <span className="px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-[10px] font-extrabold">
+          <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-600/30 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/40 text-[10px] font-extrabold">
             {withinWindowStops.length} Property Stop{withinWindowStops.length > 1 ? 's' : ''} Feasible
           </span>
         </div>
@@ -400,35 +400,35 @@ export default function TimelineView({
           {withinWindowStops.length > 0 ? (
             withinWindowStops.map(item => renderStopCard(item.stop, item.origIdx, false))
           ) : (
-            <div className="p-4 text-center text-xs text-indigo-300 font-medium">
+            <div className="p-4 text-center text-xs text-indigo-800 dark:text-indigo-300 font-medium">
               No properties currently scheduled within the expected tour window.
             </div>
           )}
         </div>
       </div>
 
-      {/* ⚠️ Red/Rose Box Container: Property Stops Beyond Tour Window (Agent Cannot Make It) */}
+      {/* ⚠️ Red/Rose Box Container: Property Stops Beyond Tour Window */}
       {outsideWindowStops.length > 0 && (
-        <div className="p-4 rounded-2xl bg-rose-950/30 border-2 border-rose-500/80 shadow-xl space-y-3 animate-fadeIn">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-rose-500/30 pb-2">
+        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-400 dark:border-rose-500/80 shadow-md space-y-3 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-rose-200 dark:border-rose-500/30 pb-2">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-              <h3 className="text-xs font-black text-rose-300 uppercase tracking-wider">
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+              <h3 className="text-xs font-black text-rose-900 dark:text-rose-300 uppercase tracking-wider">
                 Beyond Tour Window — {outsideWindowStops.length} Unreachable Stop{outsideWindowStops.length > 1 ? 's' : ''} (Finishes after {tour.latest_finish || '16:00 PM'})
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[10px] font-extrabold shrink-0">
+            <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-600/30 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-extrabold shrink-0">
               Action Required
             </span>
           </div>
 
           {/* Schedule Fix Assistant Box */}
-          <div className="p-3 rounded-xl bg-slate-950 border border-rose-500/40 space-y-2 text-xs">
-            <div className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px]">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-rose-200 dark:border-rose-500/40 space-y-2 text-xs">
+            <div className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5 text-[11px]">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
               <span>Schedule Assistant Suggestion:</span>
             </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed">
+            <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
               Reducing stop visit durations by 5 mins will allow all <strong>{outsideWindowStops.length} unreachable stop(s)</strong> to fit within your <strong>{tour.latest_finish || '16:00 PM'}</strong> finish window.
             </p>
             {onUpdateStopBuffers && (
@@ -442,7 +442,7 @@ export default function TimelineView({
                   });
                   if (onReoptimize) onReoptimize();
                 }}
-                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 hover:text-white text-[11px] font-black flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white text-[11px] font-black flex items-center gap-1.5 shadow transition-all cursor-pointer"
               >
                 <Zap className="w-3.5 h-3.5 fill-current" />
                 <span>Apply 5m Visit Reduction & Re-Optimize Schedule</span>
@@ -463,16 +463,16 @@ export default function TimelineView({
             <button
               onClick={onReoptimize}
               disabled={isOptimizing}
-              className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-800 hover:border-indigo-500 text-xs font-bold flex items-center justify-center gap-2 shadow transition-all cursor-pointer disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-indigo-600 text-slate-800 dark:text-slate-300 hover:text-white border border-slate-200 dark:border-slate-800 hover:border-indigo-500 text-xs font-bold flex items-center justify-center gap-2 shadow transition-all cursor-pointer disabled:opacity-50"
             >
               {isOptimizing ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 dark:text-indigo-400" />
                   <span>Google Re-optimizing Route Sequence...</span>
                 </>
               ) : (
                 <>
-                  <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />
+                  <RefreshCw className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Re-optimize Route Sequence</span>
                 </>
               )}
@@ -481,7 +481,7 @@ export default function TimelineView({
             <button
               onClick={() => setShowDriveDebug(!showDriveDebug)}
               title="Toggle Drive Time Debug Log"
-              className="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-purple-400 border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-purple-700 dark:text-purple-400 border border-slate-200 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors"
             >
               <Code2 className="w-3.5 h-3.5" />
               <span>Drive Logs</span>
@@ -490,15 +490,15 @@ export default function TimelineView({
 
           {/* Drive Time Debug Log Accordion */}
           {showDriveDebug && (
-            <div className="p-3 rounded-xl bg-slate-950 border border-purple-500/40 text-[11px] font-mono space-y-1.5 animate-fadeIn">
-              <div className="font-bold text-purple-300 border-b border-slate-800 pb-1 flex items-center justify-between">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-purple-300 dark:border-purple-500/40 text-[11px] font-mono space-y-1.5 animate-fadeIn">
+              <div className="font-bold text-purple-800 dark:text-purple-300 border-b border-slate-200 dark:border-slate-800 pb-1 flex items-center justify-between">
                 <span>🔍 Live Inter-Stop Drive Metrics Log</span>
                 <span className="text-slate-500 text-[10px]">Total Stops: {tour.stops.length}</span>
               </div>
               {tour.stops.map((s, i) => (
-                <div key={s.id} className="text-slate-300 flex items-center justify-between py-0.5 border-b border-slate-900">
+                <div key={s.id} className="text-slate-800 dark:text-slate-300 flex items-center justify-between py-0.5 border-b border-slate-100 dark:border-slate-900">
                   <span className="truncate max-w-[240px]">#{i + 1} {s.normalized_address}</span>
-                  <span className="text-emerald-400 font-bold shrink-0">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
                     {i === 0 ? 'START' : `🚗 ${s.drive_minutes_from_prev || 0}m (${s.drive_miles_from_prev || 0} mi)`}
                   </span>
                 </div>

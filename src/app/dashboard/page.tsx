@@ -126,51 +126,51 @@ export default function DashboardPage() {
   const renderTourCard = (t: Tour) => (
     <div
       key={t.id}
-      className="group p-4 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3 shadow-md"
+      className="group p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3 shadow-md"
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-bold text-white text-sm tracking-tight truncate group-hover:text-indigo-400 transition-colors">
+          <h3 className="font-bold text-slate-900 dark:text-white text-sm tracking-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {t.name}
           </h3>
           <StatusBadge status={t.status} type="tour" size="sm" />
         </div>
 
-        <div className="space-y-1 text-xs text-slate-300 font-medium">
+        <div className="space-y-1 text-xs text-slate-700 dark:text-slate-300 font-medium">
           {t.client_display_name && (
-            <div>Client: <strong className="text-slate-100">{t.client_display_name}</strong></div>
+            <div>Client: <strong className="text-slate-900 dark:text-slate-100">{t.client_display_name}</strong></div>
           )}
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-            <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+            <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>{t.tour_date}</span>
             <span>•</span>
-            <Clock className="w-3.5 h-3.5 text-indigo-400" />
+            <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>{t.earliest_start} – {t.latest_finish}</span>
           </div>
         </div>
 
-        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px] flex items-center justify-between">
-          <span className="text-slate-400 font-semibold">{t.stops.length} Property Stops</span>
-          <span className="text-emerald-400 font-bold">
+        <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] flex items-center justify-between">
+          <span className="text-slate-600 dark:text-slate-400 font-semibold">{t.stops.length} Property Stops</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
             {t.stops.filter(s => s.appointment_status === 'CONFIRMED').length} Confirmed
           </span>
         </div>
       </div>
 
       {/* Footer Actions */}
-      <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
         <div className="flex items-center space-x-1">
           <button
             onClick={(e) => handleDuplicate(t.id, e)}
             title="Duplicate Tour"
-            className="p-1.5 text-slate-400 hover:text-indigo-300 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={(e) => handleDelete(t.id, t.name, e)}
             title="Delete Tour"
-            className="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -191,24 +191,24 @@ export default function DashboardPage() {
     <AuthGuard>
       <div className="space-y-4 max-w-[1600px] mx-auto font-sans pb-8">
         {/* Workspace Dashboard Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-lg font-black text-white tracking-tight">
+              <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
                 Agent Showing Tour Workspace
               </h1>
               {isPro ? (
-                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1">
-                  <Crown className="w-3 h-3 text-amber-400" /> PRO Unlimited
+                <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 text-[10px] font-bold flex items-center gap-1">
+                  <Crown className="w-3 h-3 text-amber-500 dark:text-amber-400" /> PRO Unlimited
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-semibold">
+                <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-semibold border border-slate-200 dark:border-slate-700">
                   Free Trial ({toursUsed}/{FREE_TRIAL_MAX_TOURS} Used)
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400">
-              Logged in as <strong className="text-slate-200">{profile.full_name}</strong> ({profile.brokerage_name})
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Logged in as <strong className="text-slate-900 dark:text-slate-200">{profile.full_name}</strong> ({profile.brokerage_name})
             </p>
           </div>
 
@@ -217,7 +217,7 @@ export default function DashboardPage() {
               <button
                 disabled={isRedirectingCheckout}
                 onClick={handleUpgrade}
-                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer shadow"
               >
                 <Crown className="w-3.5 h-3.5" />
                 <span>{isRedirectingCheckout ? 'Connecting to Stripe...' : 'Upgrade to PRO ($14.99/mo)'}</span>
@@ -242,34 +242,34 @@ export default function DashboardPage() {
 
         {/* 4-Metric Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <div className="text-[11px] text-slate-400 font-medium">Total Tours</div>
-            <div className="text-lg font-black text-white">{tours.length}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Total Tours</div>
+            <div className="text-lg font-black text-slate-900 dark:text-white">{tours.length}</div>
           </div>
-          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <div className="text-[11px] text-slate-400 font-medium">Scheduled Properties</div>
-            <div className="text-lg font-black text-indigo-400">{totalStops}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Scheduled Properties</div>
+            <div className="text-lg font-black text-indigo-600 dark:text-indigo-400">{totalStops}</div>
           </div>
-          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <div className="text-[11px] text-slate-400 font-medium">Confirmed Showings</div>
-            <div className="text-lg font-black text-emerald-400">{totalConfirmedStops}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Confirmed Showings</div>
+            <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{totalConfirmedStops}</div>
           </div>
-          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <div className="text-[11px] text-slate-400 font-medium">Active Account</div>
-            <div className="text-xs font-bold text-white truncate">{profile.full_name}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Active Account</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{profile.full_name}</div>
           </div>
         </div>
 
         {/* Search Bar & Tour List Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs font-semibold">
+            <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-semibold">
               {(['ALL', 'ACTIVE', 'CONFIRMED', 'COMPLETED'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                    filter === f ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                    filter === f ? 'bg-indigo-600 text-white shadow' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {f === 'ALL' ? 'All Tours' : f}
@@ -286,64 +286,49 @@ export default function DashboardPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search tours by name, client, address, or MLS #..."
-              className="w-full bg-slate-900 text-white text-xs pl-9 pr-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500 placeholder:text-slate-500"
+              className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
         </div>
 
         {/* Tour List Results */}
         {searchedTours.length === 0 ? (
-          <div className="p-12 text-center bg-slate-900/50 rounded-2xl border border-slate-800 space-y-3">
-            <Calendar className="w-8 h-8 text-slate-600 mx-auto" />
-            <div className="text-sm font-bold text-white">No matching tours found</div>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+          <div className="p-12 text-center bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
+            <Calendar className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto" />
+            <div className="text-sm font-bold text-slate-900 dark:text-white">No matching tours found</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
               {searchQuery ? `No tours match "${searchQuery}". Try clearing your search.` : 'Click "+ New Tour" to build your first showing itinerary.'}
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Active / Upcoming Showing Tours Section */}
-            {activeTours.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-emerald-400" />
-                    <span>Active & Upcoming Showing Tours ({activeTours.length})</span>
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {activeTours.map(renderTourCard)}
-                </div>
+            {/* Active Tours Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <span>Active Showing Tours ({activeTours.length})</span>
               </div>
-            )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeTours.map(renderTourCard)}
+              </div>
+            </div>
 
-            {/* Folded / Collapsible Completed Past Tour History Section */}
+            {/* Foldable Completed / Archive Section */}
             {completedTours.length > 0 && (
-              <div className="space-y-3 pt-2 border-t border-slate-800/80">
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
                 <button
                   type="button"
                   onClick={() => setIsHistoryFolded(!isHistoryFolded)}
-                  className="w-full p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-left flex items-center justify-between transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
-                  <div className="flex items-center space-x-2">
-                    <History className="w-4 h-4 text-indigo-400" />
-                    <span className="text-xs font-bold text-white">
-                      Folded Past Tour History ({completedTours.length} Completed)
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">
-                      Auto-Completed
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-slate-500" />
+                    <span>Completed & Archived Showing Tours ({completedTours.length})</span>
                   </div>
-
-                  <div className="flex items-center space-x-1 text-xs text-indigo-400 font-semibold">
-                    <span>{isHistoryFolded ? 'Expand History' : 'Fold / Collapse'}</span>
-                    {isHistoryFolded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                  </div>
+                  {isHistoryFolded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
                 </button>
 
                 {!isHistoryFolded && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1 animate-fadeIn">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
                     {completedTours.map(renderTourCard)}
                   </div>
                 )}
@@ -352,33 +337,35 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Pro Membership Upgrade Modal */}
+        {/* Upgrade Modal Callout */}
         {showUpgradeModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-            <div className="relative w-full max-w-md bg-slate-900 border border-amber-500/50 rounded-2xl shadow-2xl p-6 space-y-4 text-xs">
-              <div className="text-center space-y-2">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 mx-auto flex items-center justify-center shadow-lg">
-                  <Crown className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-black text-white">Upgrade to MLS Tour Planner PRO</h3>
-                <p className="text-slate-400 text-xs">
-                  Unlock infinite tour creation, unlimited MLS Web lookups, direct client email dispatch, and priority route optimization.
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                <Crown className="w-6 h-6" />
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Upgrade to PRO Unlimited</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  You have reached the 3-tour limit on your Free Trial account. Upgrade to PRO Unlimited for $14.99/mo to build unlimited tours!
                 </p>
               </div>
-
-              <div className="pt-2 flex flex-col gap-2">
+              <div className="flex gap-2">
                 <button
-                  disabled={isRedirectingCheckout}
-                  onClick={handleUpgrade}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg transition-transform active:scale-95 disabled:opacity-50 cursor-pointer"
+                  type="button"
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
-                  {isRedirectingCheckout ? 'Connecting to Stripe Checkout...' : 'Activate PRO Unlimited ($14.99/mo Special Promo)'}
+                  Cancel
                 </button>
                 <button
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  type="button"
+                  onClick={handleUpgrade}
+                  disabled={isRedirectingCheckout}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 text-slate-950 dark:text-white font-black text-xs flex items-center justify-center gap-1 shadow"
                 >
-                  Continue with Free Trial
+                  <Crown className="w-4 h-4" />
+                  <span>Upgrade ($14.99/mo)</span>
                 </button>
               </div>
             </div>

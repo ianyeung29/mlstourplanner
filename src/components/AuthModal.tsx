@@ -8,9 +8,10 @@ import { X, Compass, LogIn, UserPlus, Mail, ShieldCheck, CheckCircle2 } from 'lu
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onLoginSuccess?: () => void;
 }
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
   const router = useRouter();
   const currentProfile = getUserProfile();
 

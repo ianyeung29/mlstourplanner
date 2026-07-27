@@ -23,7 +23,7 @@ export default function TourStageBar({
   ];
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto bg-slate-900/90 border border-slate-800 rounded-2xl p-2 sm:p-2.5 shadow-md">
+    <div className="w-full max-w-[1200px] mx-auto bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 sm:p-2.5 shadow-md">
       <div className="grid grid-cols-3 gap-1 sm:gap-2 text-xs font-sans">
         {stages.map((stage) => {
           const Icon = stage.icon;
@@ -45,27 +45,27 @@ export default function TourStageBar({
                 isActive
                   ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-extrabold shadow-lg ring-1 ring-indigo-400/50'
                   : isPassed
-                  ? 'bg-slate-950 text-emerald-400 hover:bg-slate-850 font-bold border border-emerald-500/30'
-                  : 'bg-slate-950/60 text-slate-400 opacity-60 border border-slate-800/80 cursor-not-allowed'
-              } ${isClickable && !isActive ? 'hover:text-white hover:bg-slate-800 cursor-pointer' : ''}`}
+                  ? 'bg-emerald-50 dark:bg-slate-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                  : 'bg-slate-100 dark:bg-slate-950/60 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-800/80 cursor-not-allowed'
+              } ${isClickable && !isActive ? 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white cursor-pointer' : ''}`}
             >
               <div
                 className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 ${
                   isActive
                     ? 'bg-white/20 text-white font-black'
                     : isPassed
-                    ? 'bg-emerald-500/20 text-emerald-300'
-                    : 'bg-slate-900 text-slate-500'
+                    ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                    : 'bg-slate-200 dark:bg-slate-900 text-slate-500'
                 }`}
               >
-                {isPassed ? <Check className="w-4 h-4 text-emerald-400" /> : <Icon className="w-4 h-4" />}
+                {isPassed ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Icon className="w-4 h-4" />}
               </div>
 
               <div className="text-left hidden sm:block min-w-0">
                 <div className="font-black text-xs tracking-tight truncate">{stage.name}</div>
                 <div
                   className={`text-[10px] truncate ${
-                    isActive ? 'text-indigo-100 font-medium' : isPassed ? 'text-emerald-400/80' : 'text-slate-500'
+                    isActive ? 'text-indigo-100 font-medium' : isPassed ? 'text-emerald-600 dark:text-emerald-400/80' : 'text-slate-500'
                   }`}
                 >
                   {stage.description}
