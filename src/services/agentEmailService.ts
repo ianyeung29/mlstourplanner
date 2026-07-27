@@ -57,7 +57,10 @@ Best regards,
 ${buyerAgentName}
 ${buyerAgentBrokerage}
 Phone: ${buyerAgentPhone}
-Email: ${buyerAgentEmail}`;
+Email: ${buyerAgentEmail}
+
+⚡ Powered by MLSTourPlanner.com — Real Estate Showing Tour Optimizer
+https://www.mlstourplanner.com`;
 
       bodyContentHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; color: #1e293b; line-height: 1.6;">
@@ -82,6 +85,9 @@ Email: ${buyerAgentEmail}`;
               <strong>${buyerAgentName}</strong><br />
               ${buyerAgentBrokerage}<br />
               📞 ${buyerAgentPhone} | ✉️ ${buyerAgentEmail}
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #94a3b8;">
+                ⚡ Powered by <a href="https://www.mlstourplanner.com" target="_blank" style="color: #6366f1; text-decoration: none; font-weight: bold;">MLSTourPlanner.com</a> — Real Estate Showing Tour Optimizer
+              </div>
             </div>
           </div>
         </div>`;
@@ -104,7 +110,10 @@ Best regards,
 ${buyerAgentName}
 ${buyerAgentBrokerage}
 Phone: ${buyerAgentPhone}
-Email: ${buyerAgentEmail}`;
+Email: ${buyerAgentEmail}
+
+⚡ Powered by MLSTourPlanner.com — Real Estate Showing Tour Optimizer
+https://www.mlstourplanner.com`;
 
       bodyContentHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; color: #1e293b; line-height: 1.6;">
@@ -128,6 +137,9 @@ Email: ${buyerAgentEmail}`;
               <strong>${buyerAgentName}</strong><br />
               ${buyerAgentBrokerage}<br />
               📞 ${buyerAgentPhone} | ✉️ ${buyerAgentEmail}
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #94a3b8;">
+                ⚡ Powered by <a href="https://www.mlstourplanner.com" target="_blank" style="color: #6366f1; text-decoration: none; font-weight: bold;">MLSTourPlanner.com</a> — Real Estate Showing Tour Optimizer
+              </div>
             </div>
           </div>
         </div>`;
@@ -152,7 +164,10 @@ Best regards,
 ${buyerAgentName}
 ${buyerAgentBrokerage}
 Phone: ${buyerAgentPhone}
-Email: ${buyerAgentEmail}`;
+Email: ${buyerAgentEmail}
+
+⚡ Powered by MLSTourPlanner.com — Real Estate Showing Tour Optimizer
+https://www.mlstourplanner.com`;
 
       bodyContentHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; color: #1e293b; line-height: 1.6;">
@@ -173,6 +188,9 @@ Email: ${buyerAgentEmail}`;
               <strong>${buyerAgentName}</strong><br />
               ${buyerAgentBrokerage}<br />
               📞 ${buyerAgentPhone} | ✉️ ${buyerAgentEmail}
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #94a3b8;">
+                ⚡ Powered by <a href="https://www.mlstourplanner.com" target="_blank" style="color: #6366f1; text-decoration: none; font-weight: bold;">MLSTourPlanner.com</a> — Real Estate Showing Tour Optimizer
+              </div>
             </div>
           </div>
         </div>`;
@@ -200,7 +218,10 @@ Best regards,
 ${buyerAgentName}
 ${buyerAgentBrokerage}
 Phone: ${buyerAgentPhone}
-Email: ${buyerAgentEmail}`;
+Email: ${buyerAgentEmail}
+
+⚡ Powered by MLSTourPlanner.com — Real Estate Showing Tour Optimizer
+https://www.mlstourplanner.com`;
 
       bodyContentHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; color: #1e293b; line-height: 1.6;">
@@ -224,6 +245,9 @@ Email: ${buyerAgentEmail}`;
               <strong>${buyerAgentName}</strong><br />
               ${buyerAgentBrokerage}<br />
               📞 ${buyerAgentPhone} | ✉️ ${buyerAgentEmail}
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #94a3b8;">
+                ⚡ Powered by <a href="https://www.mlstourplanner.com" target="_blank" style="color: #6366f1; text-decoration: none; font-weight: bold;">MLSTourPlanner.com</a> — Real Estate Showing Tour Optimizer
+              </div>
             </div>
           </div>
         </div>`;

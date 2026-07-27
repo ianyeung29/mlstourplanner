@@ -160,9 +160,14 @@ export default function PrintItineraryPage() {
           </div>
         </div>
 
-        {/* Footer tied to Creator Agent */}
-        <div className="border-t border-slate-800 print:border-slate-300 pt-4 text-xs text-slate-400 print:text-slate-600 text-center font-medium">
-          Prepared by <strong>{agentName}</strong> · {agentBrokerage} · {agentPhone} · {agentEmail}
+        {/* Footer tied to Creator Agent & Platform Branding */}
+        <div className="border-t border-slate-800 print:border-slate-300 pt-4 space-y-1.5 text-center text-xs text-slate-400 print:text-slate-600 font-medium">
+          <div>
+            Prepared by <strong>{agentName}</strong> · {agentBrokerage} · {agentPhone} · {agentEmail}
+          </div>
+          <div className="text-[11px] text-slate-400 print:text-slate-600">
+            ⚡ Powered by <a href="https://www.mlstourplanner.com" target="_blank" rel="noopener noreferrer" className="font-bold text-indigo-400 print:text-slate-800 hover:underline">MLSTourPlanner.com</a> — Real Estate Showing Tour Optimizer
+          </div>
         </div>
       </div>
     </div>

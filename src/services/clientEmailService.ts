@@ -62,6 +62,7 @@ export function generateClientItineraryEmail(
   bodyText += `${agentName}\n`;
   bodyText += `${brokerage}\n`;
   if (phone) bodyText += `Mobile: ${phone}\n`;
+  bodyText += `\n⚡ Powered by MLSTourPlanner.com — Real Estate Showing Tour Optimizer\nhttps://www.mlstourplanner.com\n`;
 
   const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
 
@@ -158,6 +159,9 @@ export function generateClientItineraryEmail(
       <td style="background-color: #f8fafc; padding: 16px 24px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
         <strong style="color: #0f172a;">${agentName}</strong> · ${brokerage}<br>
         ${phone ? `Mobile: ${phone} · ` : ''}${email}
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
+          ⚡ Powered by <a href="https://www.mlstourplanner.com" target="_blank" style="color: #6366f1; text-decoration: none; font-weight: bold;">MLSTourPlanner.com</a> — Real Estate Showing Tour Optimizer
+        </div>
       </td>
     </tr>
   </table>
