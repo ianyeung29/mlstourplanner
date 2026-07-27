@@ -3,8 +3,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Compass, Calendar, PlusCircle, User, Users, Settings, Home, LayoutDashboard, LogIn, LogOut, Menu, X, Sparkles, HelpCircle } from 'lucide-react';
+import { Compass, Calendar, PlusCircle, User, Users, Settings, Home, LayoutDashboard, LogIn, LogOut, Menu, X, Sparkles, HelpCircle, Sun, Moon } from 'lucide-react';
 import { getUserProfile, logoutUser } from '@/services/storage';
+import { useTheme } from '@/context/ThemeContext';
 import AuthModal from './AuthModal';
 
 export default function Header() {
@@ -14,6 +15,7 @@ export default function Header() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const publicRoutes = ['/', '/about', '/contact', '/privacy', '/terms'];
   const isPublicRoute = publicRoutes.includes(pathname || '');
@@ -145,6 +147,20 @@ export default function Header() {
 
           {/* Right Controls (Desktop) */}
           <div className="hidden md:flex items-center space-x-2">
+            {/* Theme Switcher Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+              className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              )}
+            </button>
+
             {showWorkspaceNav ? (
               <>
                 <div
@@ -198,6 +214,19 @@ export default function Header() {
 
           {/* Mobile Navigation Toggle Button */}
           <div className="flex md:hidden items-center space-x-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+              className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              )}
+            </button>
+
             {showWorkspaceNav ? (
               <>
                 <Link

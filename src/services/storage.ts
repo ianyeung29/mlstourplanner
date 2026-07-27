@@ -21,7 +21,8 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   timezone: 'America/New_York',
   subscription_tier: 'PAID_PRO',
   is_verified: true,
-  tours_created_count: 1
+  tours_created_count: 1,
+  theme_mode: 'light'
 };
 
 export const GUEST_USER_PROFILE: UserProfile = {
@@ -38,7 +39,8 @@ export const GUEST_USER_PROFILE: UserProfile = {
   timezone: 'America/New_York',
   subscription_tier: 'FREE_TRIAL',
   is_verified: false,
-  tours_created_count: 0
+  tours_created_count: 0,
+  theme_mode: 'light'
 };
 
 export const INITIAL_CONTACTS: ClientContact[] = [

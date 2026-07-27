@@ -3,8 +3,23 @@
 @tailwind utilities;
 
 :root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --header-bg: rgba(255, 255, 255, 0.9);
+  --muted-text: #64748b;
+  --subtle-bg: #f1f5f9;
+}
+
+html.dark {
   --background: #090d16;
   --foreground: #f8fafc;
+  --card-bg: #0f172a;
+  --card-border: #1e293b;
+  --header-bg: rgba(15, 23, 42, 0.9);
+  --muted-text: #94a3b8;
+  --subtle-bg: #020617;
 }
 
 body {
@@ -14,6 +29,7 @@ body {
   overflow-x: hidden;
   font-size: 11px;
   line-height: 1.35;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Compact input controls */
@@ -35,10 +51,10 @@ button {
 
 /* Glassmorphism helpers */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
 }
 
 /* Custom compact scrollbars */
@@ -47,14 +63,17 @@ button {
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: var(--subtle-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #94a3b8;
   border-radius: 3px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #64748b;
 }
 
 @keyframes fadeIn {

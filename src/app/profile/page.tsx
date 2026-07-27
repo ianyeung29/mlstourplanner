@@ -20,8 +20,11 @@ import {
   HeartHandshake,
   AlertTriangle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Sun,
+  Moon
 } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile>(getUserProfile());
@@ -29,6 +32,8 @@ export default function ProfilePage() {
 
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [showCancelNotice, setShowCancelNotice] = useState(false);
+
+  const { theme, setTheme } = useTheme();
 
   const handleChange = (field: keyof UserProfile, value: any) => {
     setProfile(prev => ({
@@ -98,76 +103,59 @@ export default function ProfilePage() {
   return (
     <AuthGuard>
       <div className="max-w-2xl mx-auto space-y-6 font-sans pb-8">
-        {/* Header Bar */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
-            <h1 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-xl font-bold text-white flex items-center gap-2">
               <Settings className="w-5 h-5 text-indigo-400" />
-              <span>Agent Account & Subscription Settings</span>
+              Agent Profile & Preferences
             </h1>
             <p className="text-xs text-slate-400">
-              Manage your profile, billing subscription, default visit durations, and travel buffers.
+              Configure your agent defaults, color theme, and subscription billing options
             </p>
           </div>
-
           {savedSuccess && (
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1 animate-fadeIn">
+            <div className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 animate-fadeIn">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Saved</span>
-            </span>
+              <span>Saved Successfully</span>
+            </div>
           )}
         </div>
 
         {/* Subscription Plan & Billing Card */}
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-amber-400" />
-              <h2 className="font-bold text-white text-xs">Active Plan & Subscription Status</h2>
-            </div>
-
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1 border ${
-              isProActive
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-            }`}>
-              {isProActive ? '🟢 PRO UNLIMITED ($14.99/mo)' : '⚪ FREE TRIAL PLAN'}
-            </span>
-          </div>
-
-          {/* Polite Cancellation Farewell Message & Termination Date Notice */}
-          {showCancelNotice && (
-            <div className="p-4 rounded-xl bg-slate-950 border border-amber-500/40 space-y-2 text-xs animate-fadeIn">
-              <div className="flex items-center gap-2 text-amber-400 font-bold">
-                <HeartHandshake className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>We&apos;re sorry to see you go!</span>
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-amber-400" />
+                <span className="font-extrabold text-white text-sm">
+                  {isProActive ? 'PRO Unlimited Subscription' : 'Free Trial Mode'}
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                  isProActive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                }`}>
+                  {isProActive ? 'ACTIVE ($14.99/mo)' : '3/3 FREE TOURS REMAINING'}
+                </span>
               </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                Thank you for using MLSTourPlanner to plan your showing tours with us! We&apos;ve loved helping you deliver seamless experiences to your buyer clients.
+              <p className="text-xs text-slate-300">
+                {isProActive
+                  ? 'Unlimited tours, DeepSeek AI Scanner, multi-property route optimization, and client dispatches.'
+                  : 'Upgrade to PRO Unlimited to unlock unlimited showing tours, DeepSeek AI scanning, and client dispatches.'}
               </p>
-              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px]">
-                📅 <strong>Service Termination Date:</strong> Your PRO features will remain fully active until <strong>{getTerminationDateStr()}</strong> (the end of your current billing period). No further renewal charges will occur.
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs pt-1">
-            <div className="text-slate-300 text-[11px] space-y-1">
-              <div>Plan: <strong className="text-white">{isProActive ? 'PRO Unlimited Membership' : 'Free Trial Account'}</strong></div>
-              <div>Billing Cycle: <span className="text-slate-400">{isProActive ? '$14.99 / month (Special Promo Rate)' : 'Standard Trial Access'}</span></div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-              {/* Stripe Customer Portal Launcher */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                disabled={isLoadingPortal}
                 onClick={handleOpenStripePortal}
-                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition-colors w-full sm:w-auto cursor-pointer"
+                disabled={isLoadingPortal}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer disabled:opacity-50"
               >
-                {isLoadingPortal ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
-                <span>{isLoadingPortal ? 'Opening Portal...' : 'Manage Billing in Stripe'}</span>
-                <ExternalLink className="w-3 h-3 text-indigo-300" />
+                {isLoadingPortal ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <CreditCard className="w-3.5 h-3.5" />
+                )}
+                <span>{isProActive ? 'Manage Stripe Billing' : 'Upgrade to PRO ($14.99/mo)'}</span>
               </button>
 
               {isProActive && (
@@ -234,6 +222,59 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-3 pt-2">
+            <h2 className="font-bold text-white text-xs border-b border-slate-800 pb-1">🎨 App Color Theme Preference</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  handleChange('theme_mode', 'light');
+                  setTheme('light');
+                }}
+                className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                  (profile.theme_mode || theme) === 'light'
+                    ? 'bg-indigo-600/20 border-indigo-500 text-white font-bold ring-2 ring-indigo-500/50'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white">Light Mode (Default)</div>
+                    <div className="text-[10px] text-slate-400">Clean, high-contrast light theme</div>
+                  </div>
+                </div>
+                {(profile.theme_mode || theme) === 'light' && <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleChange('theme_mode', 'dark');
+                  setTheme('dark');
+                }}
+                className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                  (profile.theme_mode || theme) === 'dark'
+                    ? 'bg-indigo-600/20 border-indigo-500 text-white font-bold ring-2 ring-indigo-500/50'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                    <Moon className="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white">Dark Mode</div>
+                    <div className="text-[10px] text-slate-400">Sleek dark mode theme</div>
+                  </div>
+                </div>
+                {(profile.theme_mode || theme) === 'dark' && <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2">
             <h2 className="font-bold text-white text-xs border-b border-slate-800 pb-1">Showing Defaults & Optimization Rules</h2>
 
             <div className="space-y-1">
@@ -259,7 +300,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Access Buffer (mins)</label>
+                <label className="font-semibold text-slate-300">Access Before (mins)</label>
                 <input
                   type="number"
                   value={profile.default_access_minutes || 5}

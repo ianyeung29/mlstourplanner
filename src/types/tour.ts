@@ -161,6 +161,7 @@ export interface UserProfile {
   subscription_tier: 'FREE_TRIAL' | 'PAID_PRO';
   is_verified?: boolean;
   tours_created_count: number;
+  theme_mode?: 'light' | 'dark';
 }
 
 export interface ClientContact {
