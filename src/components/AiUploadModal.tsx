@@ -12,7 +12,10 @@ interface AiUploadModalProps {
 }
 
 /**
- * Automatically crops the main exterior property photo from an uploaded listing document / flyer / screenshot image.
+ * Smart Canvas Photo Cropper:
+ * Analyzes uploaded images/documents to isolate the primary property photograph.
+ * - For direct photos/landscape screenshots: preserves full photo aspect ratio without truncating.
+ * - For tall document flyers/MLS sheets: locates the highest-entropy photo region using pixel variance analysis.
  */
 function cropListingPhotoFromUploadedFile(file: File): Promise<string> {
   return new Promise((resolve) => {
@@ -26,28 +29,112 @@ function cropListingPhotoFromUploadedFile(file: File): Promise<string> {
       const img = new Image();
       img.onload = () => {
         try {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(e.target?.result as string || '');
+          const originalDataUrl = e.target?.result as string;
+          if (!originalDataUrl) {
+            resolve('');
             return;
           }
 
-          // Real estate listing sheets / flyers / screenshots typically feature the primary property photo
-          // in the top 48% of the document image.
-          const cropW = img.width;
-          const cropH = Math.min(img.height, Math.round(img.height * 0.48));
+          const aspect = img.width / img.height;
 
-          canvas.width = cropW;
-          canvas.height = cropH;
+          // 1. If image is already a landscape photograph or standard screenshot (aspect ratio between 1.15 and 2.2),
+          // preserve full image without truncating
+          if (aspect >= 1.15 && aspect <= 2.2 && img.height <= 1250) {
+            resolve(originalDataUrl);
+            return;
+          }
 
-          ctx.drawImage(
+          // 2. Create canvas for pixel analysis
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(originalDataUrl);
+            return;
+          }
+
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          let startY = 0;
+          let cropHeight = img.height;
+          let startX = 0;
+          let cropWidth = img.width;
+
+          // 3. For tall vertical documents (flyers / MLS sheets / vertical phone screenshots):
+          if (img.height > img.width * 1.05) {
+            try {
+              const imgData = ctx.getImageData(0, 0, img.width, img.height);
+              const data = imgData.data;
+
+              const stepY = Math.max(2, Math.floor(img.height / 150));
+              const stepX = Math.max(2, Math.floor(img.width / 40));
+              const rowScores: { y: number; score: number }[] = [];
+
+              for (let y = 0; y < Math.floor(img.height * 0.7); y += stepY) {
+                let varSum = 0;
+                for (let x = 0; x < img.width - stepX; x += stepX) {
+                  const idx1 = (y * img.width + x) * 4;
+                  const idx2 = (y * img.width + (x + stepX)) * 4;
+
+                  const diff =
+                    Math.abs(data[idx1] - data[idx2]) +
+                    Math.abs(data[idx1 + 1] - data[idx2 + 1]) +
+                    Math.abs(data[idx1 + 2] - data[idx2 + 2]);
+
+                  const isLight =
+                    data[idx1] > 240 && data[idx1 + 1] > 240 && data[idx1 + 2] > 240;
+                  if (!isLight) {
+                    varSum += diff;
+                  }
+                }
+                rowScores.push({ y, score: varSum });
+              }
+
+              // Find peak continuous color variance region (the photo)
+              let maxScore = 0;
+              let bestY = Math.round(img.height * 0.08); // fallback: top margin skip
+
+              for (const item of rowScores) {
+                if (item.score > maxScore) {
+                  maxScore = item.score;
+                  bestY = item.y;
+                }
+              }
+
+              // Target a 16:10 aspect ratio box around detected photo band
+              const targetH = Math.round(img.width * 0.62);
+              startY = Math.max(0, Math.min(bestY - Math.round(targetH * 0.15), img.height - targetH));
+              cropHeight = Math.min(targetH, img.height - startY);
+
+              // Trim document page side margins
+              startX = Math.round(img.width * 0.02);
+              cropWidth = Math.round(img.width * 0.96);
+            } catch (err) {
+              // Fallback for canvas security restrictions
+              startY = Math.round(img.height * 0.05);
+              cropHeight = Math.round(img.width * 0.65);
+            }
+          }
+
+          // 4. Render final cropped image
+          const cropCanvas = document.createElement('canvas');
+          const cropCtx = cropCanvas.getContext('2d');
+          if (!cropCtx) {
+            resolve(originalDataUrl);
+            return;
+          }
+
+          cropCanvas.width = cropWidth;
+          cropCanvas.height = cropHeight;
+
+          cropCtx.drawImage(
             img,
-            0, 0, cropW, cropH,
-            0, 0, cropW, cropH
+            startX, startY, cropWidth, cropHeight,
+            0, 0, cropWidth, cropHeight
           );
 
-          const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.90);
           resolve(croppedDataUrl);
         } catch (err) {
           resolve(e.target?.result as string || '');
