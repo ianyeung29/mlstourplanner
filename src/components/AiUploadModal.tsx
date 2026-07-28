@@ -11,6 +11,80 @@ interface AiUploadModalProps {
   onAddExtractedStops: (stops: Partial<TourStop>[]) => void;
 }
 
+/**
+ * Automatically crops the main exterior property photo from an uploaded listing document / flyer / screenshot image.
+ */
+function cropListingPhotoFromUploadedFile(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith('image/')) {
+      resolve('');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string || '');
+            return;
+          }
+
+          // Real estate listing sheets / flyers / screenshots typically feature the primary property photo
+          // in the top 48% of the document image.
+          const cropW = img.width;
+          const cropH = Math.min(img.height, Math.round(img.height * 0.48));
+
+          canvas.width = cropW;
+          canvas.height = cropH;
+
+          ctx.drawImage(
+            img,
+            0, 0, cropW, cropH,
+            0, 0, cropW, cropH
+          );
+
+          const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve(croppedDataUrl);
+        } catch (err) {
+          resolve(e.target?.result as string || '');
+        }
+      };
+      img.onerror = () => resolve('');
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Uploads a base64 image string to Cloudflare R2 via /api/upload-r2.
+ */
+async function uploadCroppedPhotoToR2(base64Image: string, fileName: string): Promise<string> {
+  if (!base64Image) return '';
+  try {
+    const res = await fetch('/api/upload-r2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: base64Image,
+        fileName
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.imageUrl) {
+      return data.imageUrl;
+    }
+  } catch (e) {
+    console.error('Failed to upload cropped photo to R2:', e);
+  }
+  return base64Image;
+}
+
 export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: AiUploadModalProps) {
   const [files, setFiles] = React.useState<File[]>([]);
   const [isMultipleListings, setIsMultipleListings] = React.useState(true);
@@ -62,10 +136,21 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setCurrentFileScanning(`Scanning document ${i + 1}/${files.length}: ${file.name}`);
+        setCurrentFileScanning(`Cropping photo & scanning ${i + 1}/${files.length}: ${file.name}`);
 
+        // 1. Crop main exterior property photo from the uploaded file
+        let croppedPhotoUrl = '';
+        if (file.type.startsWith('image/')) {
+          const croppedBase64 = await cropListingPhotoFromUploadedFile(file);
+          if (croppedBase64) {
+            croppedPhotoUrl = await uploadCroppedPhotoToR2(croppedBase64, file.name);
+          }
+        }
+
+        // 2. Perform OCR text extraction
         const ocrText = await extractTextFromFile(file);
 
+        // 3. Send file & OCR payload to AI listing extraction API
         const formData = new FormData();
         formData.append('file', file);
         if (ocrText) formData.append('ocrText', ocrText);
@@ -80,11 +165,17 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
         const resultList = data.extracted || data.data;
 
         if (res.ok && resultList) {
-          if (Array.isArray(resultList)) {
-            allExtracted.push(...resultList);
-          } else {
-            allExtracted.push(resultList);
-          }
+          const rawItems = Array.isArray(resultList) ? resultList : [resultList];
+
+          // 4. Attach cropped property photo to extracted listings
+          const enrichedItems = rawItems.map(item => ({
+            ...item,
+            image_url: (item.image_url && !item.image_url.includes('unsplash'))
+              ? item.image_url
+              : (croppedPhotoUrl || item.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80')
+          }));
+
+          allExtracted.push(...enrichedItems);
         } else if (data.error) {
           setErrorMsg(data.error);
         }
@@ -178,7 +269,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
             <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-300 text-xs space-y-1 font-medium animate-fadeIn">
               <div className="font-bold flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-sm">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>AI Listing Extraction Service Unavailable</span>
+                <span>AI Listing Extraction Notice</span>
               </div>
               <p>{errorMsg}</p>
             </div>
@@ -305,7 +396,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                   <div key={idx} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-500/30 space-y-3 shadow-sm">
                     <div className="flex items-start space-x-3">
                       {/* Cropped Property Image Thumbnail stored in R2 */}
-                      <div className="relative w-24 h-16 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 border border-purple-300 dark:border-purple-500/40">
+                      <div className="relative w-28 h-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 border border-purple-300 dark:border-purple-500/40">
                         {result.image_url ? (
                           <img
                             src={result.image_url}
