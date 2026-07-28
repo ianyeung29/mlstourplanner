@@ -36,6 +36,12 @@ export default function AppointmentModal({
   const user = getUserProfile();
 
   React.useEffect(() => {
+    if (isOpen) {
+      setChannel('SMS');
+    }
+  }, [isOpen]);
+
+  React.useEffect(() => {
     if (stop) {
       const vars = extractTemplateVariables(tour, stop, user);
       const template = channel === 'SMS' ? DEFAULT_SMS_TEMPLATE : DEFAULT_EMAIL_TEMPLATE;

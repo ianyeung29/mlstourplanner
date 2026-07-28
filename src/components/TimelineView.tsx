@@ -288,11 +288,11 @@ export default function TimelineView({
                 <button
                   type="button"
                   onClick={() => onOpenMessageModal(stop)}
-                  title="Showing Assistant Notes"
+                  title="SMS Showing Request & Status"
                   className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-800 text-purple-700 dark:text-purple-300 border border-slate-200 dark:border-slate-800 flex items-center gap-1 text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   <MessageSquare className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                  <span>Notes</span>
+                  <span>SMS</span>
                 </button>
 
                 {onRemoveStop && (
