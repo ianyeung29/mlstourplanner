@@ -77,18 +77,22 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
         });
 
         const data = await res.json();
-        if (res.ok && data.extracted) {
-          if (Array.isArray(data.extracted)) {
-            allExtracted.push(...data.extracted);
+        const resultList = data.extracted || data.data;
+
+        if (res.ok && resultList) {
+          if (Array.isArray(resultList)) {
+            allExtracted.push(...resultList);
           } else {
-            allExtracted.push(data.extracted);
+            allExtracted.push(resultList);
           }
+        } else if (data.error) {
+          setErrorMsg(data.error);
         }
       }
 
       if (allExtracted.length > 0) {
         setExtractedResults(allExtracted);
-      } else {
+      } else if (!errorMsg) {
         setErrorMsg('AI Scanner could not parse listing details from the uploaded files.');
       }
     } catch (err: any) {
