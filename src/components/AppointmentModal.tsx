@@ -9,7 +9,7 @@ import {
   DEFAULT_SMS_TEMPLATE,
   renderTemplate
 } from '@/services/template';
-import { X, Copy, Check, Mail, MessageSquare, CheckCircle2, AlertCircle, XCircle, Clock } from 'lucide-react';
+import { X, Copy, Check, Mail, MessageSquare, CheckCircle2, AlertCircle, XCircle, Clock, ExternalLink, Send, Phone } from 'lucide-react';
 
 interface AppointmentModalProps {
   tour: Tour;
@@ -30,6 +30,8 @@ export default function AppointmentModal({
   const [copied, setCopied] = React.useState(false);
   const [draftText, setDraftText] = React.useState('');
   const [confirmedTimeInput, setConfirmedTimeInput] = React.useState('');
+  const [agentPhoneInput, setAgentPhoneInput] = React.useState('');
+  const [agentEmailInput, setAgentEmailInput] = React.useState('');
 
   const user = getUserProfile();
 
@@ -39,6 +41,8 @@ export default function AppointmentModal({
       const template = channel === 'SMS' ? DEFAULT_SMS_TEMPLATE : DEFAULT_EMAIL_TEMPLATE;
       setDraftText(renderTemplate(template, vars));
       setConfirmedTimeInput(stop.confirmed_start || stop.proposed_start || '10:00 AM');
+      setAgentPhoneInput(stop.listing_agent_phone || '');
+      setAgentEmailInput(stop.listing_agent_email || '');
     }
   }, [stop, tour, channel]);
 
@@ -50,8 +54,25 @@ export default function AppointmentModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Helper to build deep-link SMS URI for iOS & Android
+  const getSmsUrl = () => {
+    const cleanPhone = (agentPhoneInput || '').replace(/[^0-9+]/g, '');
+    const encodedText = encodeURIComponent(draftText);
+    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const separator = isIOS ? '&' : '?';
+    return cleanPhone
+      ? `sms:${cleanPhone}${separator}body=${encodedText}`
+      : `sms:${separator}body=${encodedText}`;
+  };
+
+  // Helper to build Mailto URI
+  const getMailtoUrl = () => {
+    const subject = `Showing Request: ${stop.normalized_address}`;
+    return `mailto:${encodeURIComponent(agentEmailInput)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(draftText)}`;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn font-sans">
       <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
@@ -73,7 +94,7 @@ export default function AppointmentModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white dark:bg-slate-900">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white dark:bg-slate-900 text-xs">
           {/* Channel Tabs */}
           <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
             <button
@@ -100,10 +121,46 @@ export default function AppointmentModal({
             </button>
           </div>
 
+          {/* Listing Agent Contact Details Bar */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
+              <span>Listing Agent Details:</span>
+              <span className="text-slate-500 dark:text-slate-400 font-medium">
+                {stop.listing_agent_name || 'N/A'} {stop.listing_brokerage ? `(${stop.listing_brokerage})` : ''}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="text-slate-500 dark:text-slate-400 font-semibold shrink-0">Phone:</span>
+                <input
+                  type="text"
+                  value={agentPhoneInput}
+                  onChange={(e) => setAgentPhoneInput(e.target.value)}
+                  placeholder="e.g. (516) 555-0188"
+                  className="bg-transparent text-slate-900 dark:text-white font-mono font-bold focus:outline-none w-full"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                <Mail className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="text-slate-500 dark:text-slate-400 font-semibold shrink-0">Email:</span>
+                <input
+                  type="email"
+                  value={agentEmailInput}
+                  onChange={(e) => setAgentEmailInput(e.target.value)}
+                  placeholder="e.g. agent@realty.com"
+                  className="bg-transparent text-slate-900 dark:text-white font-mono font-bold focus:outline-none w-full"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Draft Message Editor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Ready-to-Copy Draft Message</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Ready-to-Send Draft Message</span>
               <span>{draftText.length} characters</span>
             </div>
             <div className="relative">
@@ -113,15 +170,65 @@ export default function AppointmentModal({
                 onChange={(e) => setDraftText(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 text-sm font-sans p-4 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 transition-colors leading-relaxed resize-none"
               />
-              <button
-                onClick={handleCopy}
-                className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg transition-transform active:scale-95 cursor-pointer"
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied!' : 'Copy to Clipboard'}</span>
-              </button>
+
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied!' : 'Copy Text'}</span>
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Quick Mobile Dispatch Action Banner */}
+          {channel === 'SMS' ? (
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5 text-emerald-950 dark:text-emerald-300">
+                <div className="font-extrabold flex items-center gap-1.5 text-sm">
+                  <Send className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>One-Tap Mobile SMS Auto-Fill</span>
+                </div>
+                <p className="text-[11px] text-emerald-800 dark:text-emerald-400">
+                  Opens native Messages app on iPhone or Android with phone number & text pre-filled.
+                </p>
+              </div>
+
+              <a
+                href={getSmsUrl()}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 shrink-0 cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Open SMS App on Phone</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5 text-indigo-950 dark:text-indigo-300">
+                <div className="font-extrabold flex items-center gap-1.5 text-sm">
+                  <Mail className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>One-Tap Mail App Auto-Fill</span>
+                </div>
+                <p className="text-[11px] text-indigo-800 dark:text-indigo-400">
+                  Opens default Email client with listing agent email, subject line, and body text pre-filled.
+                </p>
+              </div>
+
+              <a
+                href={getMailtoUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 shrink-0 cursor-pointer"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Open Mail App</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
 
           {/* Update Appointment Status Actions */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
