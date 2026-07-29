@@ -28,6 +28,9 @@ import {
   CheckCircle2,
   Mail,
   Sparkles,
+  Heart,
+  HelpCircle,
+  XCircle,
   Zap
 } from 'lucide-react';
 
@@ -245,6 +248,38 @@ export default function TimelineView({
                 <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate pt-0.5">
                   Agent: <strong className="text-slate-800 dark:text-slate-200">{stop.listing_agent_name || 'N/A'}</strong> ({stop.listing_brokerage || 'N/A'})
                 </div>
+
+                {/* Real-Time Buyer Rating & Feedback Comments */}
+                {(stop.buyer_rating || stop.buyer_comments) && (
+                  <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/30 space-y-1 text-[11px] mt-1.5 animate-fadeIn">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="text-purple-800 dark:text-purple-300 flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                        Buyer Rating:
+                      </span>
+                      {stop.buyer_rating === 'FAVORITE' && (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white font-extrabold text-[10px] flex items-center gap-1 shadow-sm">
+                          <Heart className="w-3 h-3 fill-white" /> Favorite
+                        </span>
+                      )}
+                      {stop.buyer_rating === 'MAYBE' && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white font-extrabold text-[10px] flex items-center gap-1 shadow-sm">
+                          <HelpCircle className="w-3 h-3 fill-white" /> Maybe
+                        </span>
+                      )}
+                      {stop.buyer_rating === 'PASS' && (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-600 text-white font-extrabold text-[10px] flex items-center gap-1 shadow-sm">
+                          <XCircle className="w-3 h-3 text-slate-300" /> Pass
+                        </span>
+                      )}
+                    </div>
+                    {stop.buyer_comments && (
+                      <p className="text-slate-800 dark:text-slate-200 font-medium italic pl-1 text-[11px]">
+                        "{stop.buyer_comments}"
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

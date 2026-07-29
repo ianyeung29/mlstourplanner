@@ -80,6 +80,10 @@ export interface TourStop {
   agent_notes?: string;
   client_notes?: string;
 
+  buyer_rating?: 'FAVORITE' | 'MAYBE' | 'PASS';
+  buyer_comments?: string;
+  buyer_feedback_updated_at?: string;
+
   availability_windows: AvailabilityWindow[];
 }
 

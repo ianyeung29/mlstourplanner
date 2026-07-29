@@ -410,3 +410,36 @@ export function importContactsFromText(text: string): ClientContact[] {
   saveContactsToStorage(combined);
   return combined;
 }
+
+// --- BUYER FEEDBACK MANAGEMENT ---
+export function updateStopFeedback(
+  tourId: string,
+  stopId: string,
+  rating: 'FAVORITE' | 'MAYBE' | 'PASS',
+  comments?: string
+): Tour | null {
+  const tour = getTourById(tourId);
+  if (!tour) return null;
+
+  const updatedStops = tour.stops.map(s => {
+    if (s.id === stopId) {
+      return {
+        ...s,
+        buyer_rating: rating,
+        buyer_comments: comments !== undefined ? comments : s.buyer_comments,
+        buyer_feedback_updated_at: new Date().toISOString()
+      };
+    }
+    return s;
+  });
+
+  const updatedTour = {
+    ...tour,
+    stops: updatedStops,
+    updated_at: new Date().toISOString()
+  };
+
+  saveTour(updatedTour);
+  return updatedTour;
+}
+

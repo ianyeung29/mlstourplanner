@@ -18,6 +18,7 @@ import AgentAppointmentEmailModal from '@/components/AgentAppointmentEmailModal'
 import AiUploadModal from '@/components/AiUploadModal';
 import EditListingModal from '@/components/EditListingModal';
 import RouteOptionModal, { RouteOption } from '@/components/RouteOptionModal';
+import NavigationModal from '@/components/NavigationModal';
 import {
   Calendar,
   Clock,
@@ -82,6 +83,9 @@ export default function TourWorkspacePage() {
 
   // Client Email Modal state
   const [isClientEmailOpen, setIsClientEmailOpen] = React.useState(false);
+
+  // GPS Navigation & Calendar Modal state
+  const [isNavigationOpen, setIsNavigationOpen] = React.useState(false);
 
   // Agent Appointment Email Modal state
   const [activeAgentEmailStop, setActiveAgentEmailStop] = React.useState<TourStop | null>(null);
@@ -490,6 +494,15 @@ export default function TourWorkspacePage() {
               <span>Email Client Itinerary</span>
             </button>
 
+            {/* 1-Tap Mobile GPS Route Navigation & Calendar Export */}
+            <button
+              onClick={() => setIsNavigationOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition-colors shrink-0 cursor-pointer"
+            >
+              <Navigation className="w-3 h-3 text-indigo-200" />
+              <span>GPS & Calendar</span>
+            </button>
+
             {/* DeepSeek AI Document Scanner Trigger */}
             <button
               onClick={() => setIsAiUploadOpen(true)}
@@ -500,17 +513,9 @@ export default function TourWorkspacePage() {
             </button>
 
             <button
-              onClick={() => setShowAddMlsInput(!showAddMlsInput)}
-              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition-colors shrink-0 cursor-pointer"
-            >
-              <Plus className="w-3 h-3" />
-              <span>+ Add MLS #</span>
-            </button>
-
-            <button
               onClick={handleReoptimize}
               disabled={isOptimizing}
-              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/50 text-[11px] font-bold flex items-center gap-1 shadow transition-all disabled:opacity-50 cursor-pointer shrink-0"
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/50 text-[11px] font-bold flex items-center gap-1 shadow-all disabled:opacity-50 cursor-pointer shrink-0"
             >
               {isOptimizing ? (
                 <Loader2 className="w-3 h-3 animate-spin text-white" />
@@ -538,31 +543,6 @@ export default function TourWorkspacePage() {
             </button>
           </div>
         </div>
-
-        {/* Quick Add Stop by MLS Number Bar */}
-        {showAddMlsInput && (
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-indigo-200 dark:border-indigo-500/50 flex flex-col sm:flex-row items-center gap-2 animate-fadeIn text-xs shadow-sm">
-            <div className="flex items-center gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 shrink-0">
-              <Hash className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>Add MLS #:</span>
-            </div>
-            <input
-              type="text"
-              value={addMlsNumber}
-              onChange={e => setAddMlsNumber(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddStopByMls()}
-              placeholder="e.g. ONEKEY-3501298 or 3489102"
-              className="flex-1 w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500"
-            />
-            <button
-              disabled={isAddingMls || !addMlsNumber.trim()}
-              onClick={handleAddStopByMls}
-              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {isAddingMls ? 'Fetching...' : 'Fetch & Add'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Conflict Banner */}
@@ -701,6 +681,13 @@ export default function TourWorkspacePage() {
         onClose={() => setIsClientEmailOpen(false)}
       />
 
+      {/* GPS Driving Navigation & Calendar Modal */}
+      <NavigationModal
+        tour={tour}
+        isOpen={isNavigationOpen}
+        onClose={() => setIsNavigationOpen(false)}
+      />
+
       {/* Edit Tour Name & Schedule Modal */}
       {isEditTourOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
@@ -794,6 +781,42 @@ export default function TourWorkspacePage() {
           </form>
         </div>
       )}
+
+      {/* Mobile Sticky Glassmorphic Action Bar (Fixed to bottom of screen on mobile) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 p-2 shadow-2xl flex items-center justify-around gap-1.5 font-sans text-[10px] font-bold">
+        <button
+          onClick={() => setIsNavigationOpen(true)}
+          className="flex-1 py-2 rounded-xl bg-indigo-600 text-white flex flex-col items-center justify-center gap-0.5 shadow-md active:scale-95 transition-transform cursor-pointer"
+        >
+          <Navigation className="w-4 h-4 text-indigo-100" />
+          <span>GPS & Cal</span>
+        </button>
+
+        <button
+          onClick={handleReoptimize}
+          disabled={isOptimizing}
+          className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex flex-col items-center justify-center gap-0.5 border border-slate-200 dark:border-slate-700 active:scale-95 transition-transform disabled:opacity-50 cursor-pointer"
+        >
+          {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin text-indigo-500" /> : <RefreshCw className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+          <span>Optimize</span>
+        </button>
+
+        <button
+          onClick={() => setIsClientEmailOpen(true)}
+          className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex flex-col items-center justify-center gap-0.5 border border-slate-200 dark:border-slate-700 active:scale-95 transition-transform cursor-pointer"
+        >
+          <Mail className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>Share</span>
+        </button>
+
+        <button
+          onClick={() => setIsAiUploadOpen(true)}
+          className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex flex-col items-center justify-center gap-0.5 shadow-md active:scale-95 transition-transform cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4 text-purple-200" />
+          <span>AI Scan</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -24,7 +24,7 @@ export function generateClientItineraryEmail(
   baseUrl?: string
 ): ClientEmailResult {
   const resolvedBaseUrl = baseUrl || getAppBaseUrl();
-  const onlineUrl = `${resolvedBaseUrl}/tours/${tour.id}`;
+  const onlineUrl = `${resolvedBaseUrl}/tours/${tour.id}/client`;
   const clientName = tour.client_display_name || 'Valued Client';
   const agentName = user.full_name || 'Your Agent';
   const brokerage = user.brokerage_name || 'Side Luxury Real Estate';
