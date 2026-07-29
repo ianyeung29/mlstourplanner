@@ -84,6 +84,9 @@ export interface TourStop {
   buyer_comments?: string;
   buyer_feedback_updated_at?: string;
 
+  is_break?: boolean;
+  break_title?: string;
+
   availability_windows: AvailabilityWindow[];
 }
 

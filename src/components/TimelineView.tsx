@@ -31,7 +31,9 @@ import {
   Heart,
   HelpCircle,
   XCircle,
-  Zap
+  Zap,
+  Utensils,
+  Coffee
 } from 'lucide-react';
 
 interface TimelineViewProps {
@@ -150,8 +152,47 @@ export default function TimelineView({
                   : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900'
           }`}
         >
-          <div className="space-y-2.5">
-            {/* Top Row: Thumbnail + Full Width Property Details */}
+          {stop.is_break ? (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 font-sans">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-md">
+                  <Utensils className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-amber-950 dark:text-amber-300 flex items-center gap-2">
+                    <span>{stop.break_title || 'Lunch & Rest Break'}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-mono text-[9px]">
+                      {stop.visit_minutes} mins
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-400 font-medium truncate">
+                    Location: {stop.normalized_address || 'Scheduled Rest Stop'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-bold font-mono text-amber-900 dark:text-amber-300 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  {stop.planned_arrival || '12:30 PM'}
+                </span>
+                {onRemoveStop && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveStop(stop.id);
+                    }}
+                    className="p-1 rounded-lg hover:bg-rose-600 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="Remove Break"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {/* Top Row: Thumbnail + Full Width Property Details */}
             <div className="flex items-start space-x-3">
               {/* Primary Property Image Thumbnail */}
               <div className="relative w-16 h-14 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 border border-slate-200 dark:border-slate-800">
@@ -366,50 +407,50 @@ export default function TimelineView({
                 </button>
               </div>
             </div>
-          </div>
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                <div className={`flex items-center gap-1.5 font-bold ${isOutside ? 'text-rose-700 dark:text-rose-300' : 'text-indigo-700 dark:text-indigo-300'}`}>
+                  <Clock className={`w-3 h-3 ${isOutside ? 'text-rose-500 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                  <span>Time: {stop.planned_arrival || 'TBD'} – {stop.planned_departure || 'TBD'}</span>
+                </div>
 
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-            <div className={`flex items-center gap-1.5 font-bold ${isOutside ? 'text-rose-700 dark:text-rose-300' : 'text-indigo-700 dark:text-indigo-300'}`}>
-              <Clock className={`w-3 h-3 ${isOutside ? 'text-rose-500 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
-              <span>Time: {stop.planned_arrival || 'TBD'} – {stop.planned_departure || 'TBD'}</span>
-            </div>
+                <div className="flex items-center justify-between sm:justify-end space-x-3 text-[10px]" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400">Visit:</span>
+                    <button
+                      onClick={() => handleVisitChange(-5)}
+                      className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
+                    >
+                      -
+                    </button>
+                    <span className="font-bold text-slate-900 dark:text-white px-0.5">{stop.visit_minutes}m</span>
+                    <button
+                      onClick={() => handleVisitChange(5)}
+                      className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
 
-            <div className="flex items-center justify-between sm:justify-end space-x-3 text-[10px]" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                <span className="text-slate-500 dark:text-slate-400">Visit:</span>
-                <button
-                  onClick={() => handleVisitChange(-5)}
-                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
-                >
-                  -
-                </button>
-                <span className="font-bold text-slate-900 dark:text-white px-0.5">{stop.visit_minutes}m</span>
-                <button
-                  onClick={() => handleVisitChange(5)}
-                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
-                >
-                  +
-                </button>
+                  <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400">Buffer:</span>
+                    <button
+                      onClick={() => handleBufferChange(-5)}
+                      className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
+                    >
+                      -
+                    </button>
+                    <span className="font-bold text-slate-900 dark:text-white px-0.5">{stop.travel_buffer_minutes}m</span>
+                    <button
+                      onClick={() => handleBufferChange(5)}
+                      className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
-
-              <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                <span className="text-slate-500 dark:text-slate-400">Buffer:</span>
-                <button
-                  onClick={() => handleBufferChange(-5)}
-                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
-                >
-                  -
-                </button>
-                <span className="font-bold text-slate-900 dark:text-white px-0.5">{stop.travel_buffer_minutes}m</span>
-                <button
-                  onClick={() => handleBufferChange(5)}
-                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold"
-                >
-                  +
-                </button>
-              </div>
             </div>
-          </div>
+          )}
         </div>
       </React.Fragment>
     );

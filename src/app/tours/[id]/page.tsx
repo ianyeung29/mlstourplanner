@@ -19,6 +19,7 @@ import AiUploadModal from '@/components/AiUploadModal';
 import EditListingModal from '@/components/EditListingModal';
 import RouteOptionModal, { RouteOption } from '@/components/RouteOptionModal';
 import NavigationModal from '@/components/NavigationModal';
+import AddBreakModal from '@/components/AddBreakModal';
 import {
   Calendar,
   Clock,
@@ -36,7 +37,8 @@ import {
   Save,
   Sparkles,
   Loader2,
-  Navigation
+  Navigation,
+  Utensils
 } from 'lucide-react';
 
 export default function TourWorkspacePage() {
@@ -86,6 +88,44 @@ export default function TourWorkspacePage() {
 
   // GPS Navigation & Calendar Modal state
   const [isNavigationOpen, setIsNavigationOpen] = React.useState(false);
+
+  // Add Break Modal state
+  const [isAddBreakOpen, setIsAddBreakOpen] = React.useState(false);
+
+  const handleAddBreakStop = (breakStop: Partial<TourStop>) => {
+    if (!tour) return;
+    const newStop: TourStop = {
+      id: `stop_break_${Date.now()}`,
+      tour_id: tour.id,
+      original_input: breakStop.original_input || 'Lunch Break',
+      normalized_address: breakStop.normalized_address || 'Lunch Break',
+      latitude: breakStop.latitude || 40.79,
+      longitude: breakStop.longitude || -73.69,
+      geocode_status: 'RESOLVED',
+      priority: 'MUST_SEE',
+      appointment_status: breakStop.appointment_status || 'CONFIRMED',
+      scheduling_mode: breakStop.scheduling_mode || 'TIME_LOCKED',
+      confirmed_start: breakStop.confirmed_start,
+      proposed_start: breakStop.proposed_start,
+      planned_arrival: breakStop.planned_arrival,
+      visit_minutes: breakStop.visit_minutes || 45,
+      access_before_minutes: 0,
+      access_after_minutes: 0,
+      travel_buffer_minutes: 5,
+      agent_notes: breakStop.agent_notes,
+      is_break: true,
+      break_title: breakStop.break_title,
+      availability_windows: []
+    };
+
+    const updatedStops = [...tour.stops, newStop];
+    const draft = { ...tour, stops: updatedStops };
+    const { updatedTour, result } = optimizeTourSchedule(draft);
+    saveTour(updatedTour);
+    setTour(updatedTour);
+    setWarnings(result.warnings);
+    setInfeasibleReasons(result.infeasibleReasons || []);
+  };
 
   // Agent Appointment Email Modal state
   const [activeAgentEmailStop, setActiveAgentEmailStop] = React.useState<TourStop | null>(null);
@@ -512,6 +552,15 @@ export default function TourWorkspacePage() {
               <span>+ AI Scan PDF / Image</span>
             </button>
 
+            {/* Lunch / Coffee Rest Break Trigger */}
+            <button
+              onClick={() => setIsAddBreakOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-[11px] font-bold flex items-center gap-1 shadow transition-colors shrink-0 cursor-pointer"
+            >
+              <Utensils className="w-3 h-3 text-amber-100" />
+              <span>+ Add Break</span>
+            </button>
+
             <button
               onClick={handleReoptimize}
               disabled={isOptimizing}
@@ -686,6 +735,13 @@ export default function TourWorkspacePage() {
         tour={tour}
         isOpen={isNavigationOpen}
         onClose={() => setIsNavigationOpen(false)}
+      />
+
+      {/* Add Lunch / Rest Break Modal */}
+      <AddBreakModal
+        isOpen={isAddBreakOpen}
+        onClose={() => setIsAddBreakOpen(false)}
+        onAddBreak={handleAddBreakStop}
       />
 
       {/* Edit Tour Name & Schedule Modal */}
