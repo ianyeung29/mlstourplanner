@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     );
     debugLog.apiKeyConfigured = isConfigured;
 
-    // Smart Local OCR/PDF Parser (used when API key is not configured or on network fallback)
+    // Smart Local PDF & Listing Document Parser
     if (!isConfigured) {
       console.warn('DEEPSEEK_API_KEY is not configured in .env. Using Smart Local PDF Parser.');
 
@@ -188,6 +188,82 @@ ${cleanInputText.length > 0 ? cleanInputText : fileName}
 }
 
 /**
+ * Multi-Tier Address Resolver:
+ * Resolves exact street address from OneKey MLS headers, multi-line addresses, and PDF text.
+ */
+function extractAddressFromOcrText(text: string, fileName: string): string {
+  if (!text) {
+    return fileName.replace(/\.[^/.]+$/, '').replace(/[_]/g, ' ').trim();
+  }
+
+  const lines = text
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+
+  // Strategy 1: Examine top header lines of MLS document (Line 1 to 8)
+  for (let i = 0; i < Math.min(lines.length, 8); i++) {
+    const line = lines[i];
+
+    // Skip generic document title lines
+    if (/^(?:Agent Full|Client Full|Page \d+|OneKey|MLS|Public Remarks|Property\/Tax)/i.test(line)) {
+      continue;
+    }
+
+    // Check if line starts with a building number (including hyphenated numbers like 45-12)
+    if (/^\d+(?:[-\/]\d+|[A-Za-z])?\s+[A-Za-z0-9\s\.\-]{3,50}/.test(line)) {
+      let cleanLine = line
+        .replace(/^(?:--- Page \d+ ---|\d+\s+Page|Page\s+\d+|Agent Full \d+ Page)\s*/i, '')
+        .replace(/\s+(?:MLS\s*#?|Prop Type|Price:|\$).*$/i, '')
+        .trim();
+
+      if (cleanLine.length >= 8 && /\d/.test(cleanLine)) {
+        return cleanLine;
+      }
+    }
+  }
+
+  // Strategy 2: Multi-line address joining (Street on Line 1, City State Zip on Line 2)
+  for (let i = 0; i < Math.min(lines.length - 1, 6); i++) {
+    const l1 = lines[i];
+    const l2 = lines[i + 1];
+
+    if (/^\d+(?:[-\/]\d+|[A-Za-z])?\s+[A-Za-z0-9\s\.\-]{3,40}/.test(l1) &&
+        /[A-Za-z\s]+[,\s]+(?:NY|New York|NJ|CT|CA|FL|MA|PA)[,\s]+\d{5}/i.test(l2)) {
+      return `${l1.replace(/\s*(?:MLS).*$/i, '').trim()}, ${l2.trim()}`;
+    }
+  }
+
+  // Strategy 3: Global Regex Matcher for full addresses anywhere in text
+  const globalMatch = text.match(/(\d+(?:[-\/]\d+|[A-Za-z])?\s+[A-Za-z0-9\s\.\-]{2,40}(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Court|Ct|Place|Pl|Circle|Cir|Terrace|Ter|Highway|Hwy|Pkwy|Parkway|Blvd)[,\s]+[A-Za-z\s]+[,\s]+(?:New York|NY|NJ|CT|CA|FL|MA|PA)[,\s]+\d{5}(?:-\d{4})?)/i);
+
+  if (globalMatch) {
+    return globalMatch[1]
+      .replace(/^(?:--- Page \d+ ---|\d+\s+Page|Page\s+\d+|Agent Full \d+ Page)\s*/i, '')
+      .replace(/\s+(?:MLS\s*#?|Prop Type|Price:|\$).*$/i, '')
+      .trim();
+  }
+
+  // Strategy 4: Basic Street Regex Anywhere
+  const basicStreetMatch = text.match(/(\d+(?:[-\/]\d+|[A-Za-z])?\s+[A-Za-z0-9\s\.\-]{3,40}(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Court|Ct|Place|Pl|Circle|Cir|Terrace|Ter|Highway|Hwy|Pkwy|Parkway)[,\w\s\d]*)/i);
+
+  if (basicStreetMatch) {
+    return basicStreetMatch[1]
+      .replace(/^(?:--- Page \d+ ---|\d+\s+Page|Page\s+\d+|Agent Full \d+ Page)\s*/i, '')
+      .replace(/\s+(?:MLS\s*#?|Prop Type|Price:|\$).*$/i, '')
+      .trim();
+  }
+
+  // Strategy 5: Cleaned FileName Fallback
+  return fileName
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[_]/g, ' ')
+    .replace(/Agent Full \d+ Page/i, '')
+    .replace(/Client Full \d+ Page/i, '')
+    .trim();
+}
+
+/**
  * Smart Regex PDF & Listing Document Parser:
  * Intelligently extracts real estate listing metadata directly from OneKey MLS PDF sheets,
  * agent flyers, and OCR text without relying on hardcoded mock values.
@@ -195,31 +271,11 @@ ${cleanInputText.length > 0 ? cleanInputText : fileName}
 function generateFallbackListings(ocrText: string, fileName: string) {
   const text = ocrText || '';
 
-  // 1. Address Extraction: full street address + City, State, Zip
-  let mockAddress = '';
-
-  const fullAddressMatch = text.match(/(\d+\s+[A-Za-z0-9\s\.\-]{3,40}(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Court|Ct|Place|Pl|Circle|Cir|Terrace|Ter|Highway|Hwy)[,\s]+[A-Za-z\s]+[,\s]+(?:New York|NY|NJ|CT)[,\s]+\d{5}(?:-\d{4})?)/i);
-
-  if (fullAddressMatch) {
-    mockAddress = fullAddressMatch[1];
-  } else {
-    const streetCityMatch = text.match(/(\d+\s+[A-Za-z0-9\s\.\-]{3,40}(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Court|Ct|Place|Pl|Circle|Cir|Terrace|Ter)[,\s]+[A-Za-z\s]+[,\s]+\d{5})/i);
-    if (streetCityMatch) {
-      mockAddress = streetCityMatch[1];
-    } else {
-      const generalMatch = text.match(/\d+\s+[A-Za-z0-9\s\.\-]{3,40}(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Court|Ct|Place|Pl|Circle|Cir|Terrace|Ter)[,\w\s\d]*/i);
-      mockAddress = generalMatch ? generalMatch[0] : fileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
-    }
-  }
-
-  // Strip header artifacts like "1 Page", "--- Page 1 ---", "Agent Full 1 Page", or trailing "MLS"
-  mockAddress = mockAddress
-    .replace(/^(?:--- Page \d+ ---|\d+\s+Page|Page\s+\d+|Agent Full \d+ Page)\s*/i, '')
-    .replace(/\s*(?:MLS#?|MLS|\d{6,10}).*$/i, '')
-    .trim();
+  // 1. Address Extraction via Multi-Tier Resolver
+  const mockAddress = extractAddressFromOcrText(text, fileName);
 
   // 2. MLS Number
-  const mlsMatch = text.match(/(?:MLS\s*#?|MLS\s*ID\s*#?|ONEKEY)\s*:?\s*([A-Z0-9-]{6,12})/i);
+  const mlsMatch = text.match(/(?:MLS\s*#?|MLS\s*ID\s*#?|ONEKEY|Listing\s*#)\s*:?\s*([A-Z0-9-]{5,12})/i);
   const mockMls = mlsMatch ? mlsMatch[1].trim() : `ONEKEY-${Math.floor(1000000 + Math.random() * 9000000)}`;
 
   // 3. List Price
@@ -247,7 +303,7 @@ function generateFallbackListings(ocrText: string, fileName: string) {
   }
 
   // 6. SqFt / GLA
-  const glaMatch = text.match(/(?:Taxable Living Area \(GLA\)|GLA|Living Area|SqFt|Square Feet)\s*:?\s*([0-9,]{3,7})/i);
+  const glaMatch = text.match(/(?:Taxable Living Area \(GLA\)|GLA|Living Area|Building SqFt|SqFt|Square Feet)\s*:?\s*([0-9,]{3,7})/i);
   const lotSqftMatch = text.match(/Lot Size SqFt\s*:?\s*([0-9,]{3,7})/i);
   let mockSqft = 1800;
   if (glaMatch) {
