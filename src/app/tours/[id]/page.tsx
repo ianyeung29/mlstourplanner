@@ -235,7 +235,7 @@ export default function TourWorkspacePage() {
     });
 
     const draft = { ...tour, stops: copy };
-    const { updatedTour, result } = optimizeTourSchedule(draft);
+    const { updatedTour, result } = optimizeTourSchedule(draft, { preserveOrder: true });
     saveTour(updatedTour);
     setTour(updatedTour);
     setWarnings(result.warnings);

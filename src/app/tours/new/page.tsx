@@ -15,6 +15,7 @@ import TourStageBar from '@/components/TourStageBar';
 import TimelineView from '@/components/TimelineView';
 import MapView from '@/components/MapView';
 import ClientEmailModal from '@/components/ClientEmailModal';
+import AddBreakModal from '@/components/AddBreakModal';
 import { triggerAuthModal } from '@/services/authModal';
 import {
   Calendar,
@@ -39,7 +40,8 @@ import {
   ChevronUp,
   UserCheck,
   Check,
-  Edit2
+  Edit2,
+  Utensils
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -70,6 +72,39 @@ function NewTourWizardContent() {
 
   const [activeAgentEmailStop, setActiveAgentEmailStop] = React.useState<TourStop | null>(null);
   const [isAgentEmailOpen, setIsAgentEmailOpen] = React.useState(false);
+
+  // Add Break Modal state
+  const [isAddBreakOpen, setIsAddBreakOpen] = React.useState(false);
+
+  const handleAddBreakStop = (breakStop: Partial<TourStop>) => {
+    if (!savedTour) return;
+    const newStop: TourStop = {
+      id: `stop_break_${Date.now()}`,
+      tour_id: savedTour.id,
+      original_input: breakStop.original_input || 'Lunch Break',
+      normalized_address: breakStop.normalized_address || 'Lunch Break',
+      latitude: breakStop.latitude || 40.79,
+      longitude: breakStop.longitude || -73.69,
+      geocode_status: 'RESOLVED',
+      priority: 'MUST_SEE',
+      appointment_status: breakStop.appointment_status || 'CONFIRMED',
+      scheduling_mode: breakStop.scheduling_mode || 'TIME_LOCKED',
+      confirmed_start: breakStop.confirmed_start,
+      proposed_start: breakStop.proposed_start,
+      planned_arrival: breakStop.planned_arrival,
+      visit_minutes: breakStop.visit_minutes || 45,
+      access_before_minutes: 0,
+      access_after_minutes: 0,
+      travel_buffer_minutes: 5,
+      agent_notes: breakStop.agent_notes,
+      is_break: true,
+      break_title: breakStop.break_title,
+      availability_windows: []
+    };
+
+    const updatedStops = [...savedTour.stops, newStop];
+    buildAndOptimizeTour(updatedStops);
+  };
 
   // Form State (Defaulted automatically from agent saved preferences)
   const [name, setName] = React.useState('Showing Tour');
@@ -223,7 +258,8 @@ function NewTourWizardContent() {
     currentStops: Partial<TourStop>[],
     targetDate: string = tourDate,
     targetStart: string = earliestStart,
-    targetFinish: string = latestFinish
+    targetFinish: string = latestFinish,
+    options?: { preserveOrder?: boolean }
   ) => {
     const draftTour: Tour = {
       id: savedTour?.id || `tour_${Date.now()}`,
@@ -248,7 +284,7 @@ function NewTourWizardContent() {
       updated_at: new Date().toISOString()
     };
 
-    const { updatedTour } = optimizeTourSchedule(draftTour);
+    const { updatedTour } = optimizeTourSchedule(draftTour, options);
     const persisted = saveTour(updatedTour);
     setSavedTour(persisted);
     setStops(persisted.stops);
@@ -293,7 +329,7 @@ function NewTourWizardContent() {
       s.planned_order = idx + 1;
     });
 
-    buildAndOptimizeTour(copy);
+    buildAndOptimizeTour(copy, tourDate, earliestStart, latestFinish, { preserveOrder: true });
   };
 
   const handleSaveStopDetails = (updatedStop: TourStop) => {
@@ -592,6 +628,16 @@ function NewTourWizardContent() {
                     className="bg-transparent text-slate-900 dark:text-white font-bold text-xs focus:outline-none cursor-pointer"
                   />
                 </div>
+
+                {/* Lunch / Coffee Rest Break Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setIsAddBreakOpen(true)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold flex items-center gap-1 shadow transition-colors shrink-0 cursor-pointer"
+                >
+                  <Utensils className="w-3.5 h-3.5 text-amber-100" />
+                  <span>+ Add Break</span>
+                </button>
               </div>
             </div>
 
@@ -815,6 +861,13 @@ function NewTourWizardContent() {
           onClose={() => setIsClientEmailOpen(false)}
         />
       )}
+
+      {/* Add Lunch / Rest Break Modal */}
+      <AddBreakModal
+        isOpen={isAddBreakOpen}
+        onClose={() => setIsAddBreakOpen(false)}
+        onAddBreak={handleAddBreakStop}
+      />
     </div>
   );
 }

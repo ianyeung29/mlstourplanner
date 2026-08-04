@@ -207,11 +207,16 @@ export function generateConflictRemedies(tour: Tour, warnings: string[], infeasi
   return remedies;
 }
 
-export function optimizeTourSchedule(tourInput: Tour): {
+export function optimizeTourSchedule(
+  tourInput: Tour,
+  options?: { preserveOrder?: boolean }
+): {
   updatedTour: Tour;
   result: RouteOptimizationResult;
 } {
-  const tour = ensureMustSeePrioritySchedule(tourInput);
+  const tour = options?.preserveOrder
+    ? tourInput
+    : ensureMustSeePrioritySchedule(tourInput);
   const warnings: string[] = [];
   const infeasibleReasons: string[] = [];
 

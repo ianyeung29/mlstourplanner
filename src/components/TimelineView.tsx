@@ -286,7 +286,11 @@ export default function TimelineView({
                   {/* Interactive Priority Selector Dropdown */}
                   <select
                     value={stop.priority || 'PREFERRED'}
-                    onChange={(e) => onUpdateStopPriority?.(stop.id, e.target.value as any)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onUpdateStopPriority?.(stop.id, e.target.value as any);
+                    }}
                     title="Change Property Priority"
                     className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border cursor-pointer focus:outline-none transition-colors ${
                       stop.priority === 'MUST_SEE'
