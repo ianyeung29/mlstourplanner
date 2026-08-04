@@ -16,10 +16,50 @@ export interface TemplateVariables {
   tour_day: string;
 }
 
+/**
+ * Rounds a time string (e.g. "10:07 AM" or "14:22") to the nearest 15-minute interval (e.g. "10:00 AM", "10:15 AM").
+ */
+export function roundToNearest15Minutes(timeStr: string): string {
+  if (!timeStr) return '10:00 AM';
+
+  const isPM = /pm/i.test(timeStr);
+  const isAM = /am/i.test(timeStr);
+  const cleaned = timeStr.replace(/[^0-9:]/g, '');
+  const parts = cleaned.split(':');
+
+  if (parts.length < 2) return timeStr;
+
+  let hours = parseInt(parts[0], 10);
+  let minutes = parseInt(parts[1], 10);
+
+  if (isNaN(hours) || isNaN(minutes)) return timeStr;
+
+  if (isPM && hours < 12) hours += 12;
+  if (isAM && hours === 12) hours = 0;
+
+  // Round minutes to nearest 15
+  let roundedMinutes = Math.round(minutes / 15) * 15;
+  if (roundedMinutes === 60) {
+    hours += 1;
+    roundedMinutes = 0;
+  }
+
+  hours = hours % 24;
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  let formattedHours = hours % 12;
+  if (formattedHours === 0) formattedHours = 12;
+
+  const formattedMinutes = roundedMinutes.toString().padStart(2, '0');
+  return `${formattedHours}:${formattedMinutes} ${ampm}`;
+}
+
 export function extractTemplateVariables(tour: Tour, stop: TourStop, user: UserProfile): TemplateVariables {
   const dateObj = new Date(tour.tour_date + 'T00:00:00');
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const tour_day = isNaN(dateObj.getTime()) ? '' : days[dateObj.getDay()];
+
+  const rawArrival = stop.proposed_start || stop.planned_arrival || '10:00 AM';
+  const rawDeparture = stop.planned_departure || '10:30 AM';
 
   return {
     agent_name: user.full_name || 'Agent',
@@ -30,8 +70,8 @@ export function extractTemplateVariables(tour: Tour, stop: TourStop, user: UserP
     listing_agent_name: stop.listing_agent_name || 'Listing Agent',
     listing_address: stop.normalized_address || stop.original_input,
     mls_number: stop.mls_number || 'N/A',
-    proposed_arrival_time: stop.proposed_start || stop.planned_arrival || '10:00 AM',
-    proposed_departure_time: stop.planned_departure || '10:30 AM',
+    proposed_arrival_time: roundToNearest15Minutes(rawArrival),
+    proposed_departure_time: roundToNearest15Minutes(rawDeparture),
     visit_duration: `${stop.visit_minutes || tour.default_visit_minutes}`,
     tour_date: tour.tour_date,
     tour_day: tour_day

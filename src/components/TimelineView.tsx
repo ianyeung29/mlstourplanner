@@ -153,12 +153,12 @@ export default function TimelineView({
           }`}
         >
           {stop.is_break ? (
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 font-sans">
-              <div className="flex items-center space-x-3 min-w-0">
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-sans">
+              <div className="flex items-center space-x-3 min-w-0 flex-1">
                 <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-md">
                   <Utensils className="w-5 h-5" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="text-xs font-black text-amber-950 dark:text-amber-300 flex items-center gap-2">
                     <span>{stop.break_title || 'Lunch & Rest Break'}</span>
                     <span className="px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-mono text-[9px]">
@@ -171,16 +171,78 @@ export default function TimelineView({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs font-bold font-mono text-amber-900 dark:text-amber-300 flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-amber-200 dark:border-amber-500/20">
+                {/* Arrival Time */}
+                <span className="text-xs font-bold font-mono text-amber-900 dark:text-amber-300 flex items-center gap-1 bg-amber-100 dark:bg-amber-950/60 px-2 py-1 rounded-lg border border-amber-300 dark:border-amber-500/40">
                   <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   {stop.planned_arrival || '12:30 PM'}
                 </span>
-                {onRemoveStop && (
+
+                {/* Adjust Break Length +/- 5 mins */}
+                <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-500/30 text-[10px]" onClick={e => e.stopPropagation()}>
+                  <span className="text-amber-900 dark:text-amber-300 font-semibold">Length:</span>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRemoveStop(stop.id);
+                      onUpdateStopBuffers?.(stop.id, Math.max(10, stop.visit_minutes - 5), stop.travel_buffer_minutes);
+                    }}
+                    className="w-4 h-4 rounded bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 text-amber-900 dark:text-amber-100 flex items-center justify-center font-bold"
+                    title="Decrease Break Length (-5 mins)"
+                  >
+                    -
+                  </button>
+                  <span className="font-bold text-slate-900 dark:text-white px-0.5">{stop.visit_minutes}m</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateStopBuffers?.(stop.id, stop.visit_minutes + 5, stop.travel_buffer_minutes);
+                    }}
+                    className="w-4 h-4 rounded bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 text-amber-900 dark:text-amber-100 flex items-center justify-center font-bold"
+                    title="Increase Break Length (+5 mins)"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Move Up / Down Reorder Buttons */}
+                <div className="flex items-center gap-0.5 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-amber-200 dark:border-amber-500/30" onClick={e => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveStop(idx, 'up');
+                    }}
+                    title="Move Break Up"
+                    className="p-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 cursor-pointer"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={idx === tour.stops.length - 1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveStop(idx, 'down');
+                    }}
+                    title="Move Break Down"
+                    className="p-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 cursor-pointer"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Remove Break */}
+                {onRemoveStop && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Remove break "${stop.break_title || 'Lunch Break'}" from itinerary?`)) {
+                        onRemoveStop(stop.id);
+                      }
                     }}
                     className="p-1 rounded-lg hover:bg-rose-600 text-slate-400 hover:text-white transition-colors cursor-pointer"
                     title="Remove Break"

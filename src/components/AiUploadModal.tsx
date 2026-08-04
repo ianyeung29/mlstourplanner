@@ -12,140 +12,185 @@ interface AiUploadModalProps {
 }
 
 /**
- * Smart Canvas Photo Cropper:
- * Analyzes uploaded images/documents to isolate the primary property photograph.
- * - For direct photos/landscape screenshots: preserves full photo aspect ratio without truncating.
- * - For tall document flyers/MLS sheets: locates the highest-entropy photo region using pixel variance analysis.
+ * PDF Text & Page Canvas Processor:
+ * Extracts digital text from PDF pages and renders Page 1 to an HTML5 Canvas for photo cropping & OCR.
  */
-function cropListingPhotoFromUploadedFile(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    if (!file || !file.type.startsWith('image/')) {
-      resolve('');
-      return;
+async function processPdfFile(file: File): Promise<{ text: string; pageCanvas: HTMLCanvasElement | null }> {
+  try {
+    const pdfjsLib = await import('pdfjs-dist');
+    if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const originalDataUrl = e.target?.result as string;
-          if (!originalDataUrl) {
-            resolve('');
-            return;
-          }
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-          const aspect = img.width / img.height;
+    let fullText = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      fullText += `\n--- Page ${p} ---\n` + pageText;
+    }
 
-          // 1. If image is already a landscape photograph or standard screenshot (aspect ratio between 1.15 and 2.2),
-          // preserve full image without truncating
-          if (aspect >= 1.15 && aspect <= 2.2 && img.height <= 1250) {
-            resolve(originalDataUrl);
-            return;
-          }
+    let pageCanvas: HTMLCanvasElement | null = null;
+    if (pdf.numPages > 0) {
+      const page1 = await pdf.getPage(1);
+      const viewport = page1.getViewport({ scale: 1.5 });
+      pageCanvas = document.createElement('canvas');
+      pageCanvas.width = viewport.width;
+      pageCanvas.height = viewport.height;
+      const ctx = pageCanvas.getContext('2d');
+      if (ctx) {
+        await page1.render({ canvasContext: ctx, viewport }).promise;
+      }
+    }
 
-          // 2. Create canvas for pixel analysis
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(originalDataUrl);
-            return;
-          }
+    return { text: fullText, pageCanvas };
+  } catch (err) {
+    console.error('PDF parsing error:', err);
+    return { text: '', pageCanvas: null };
+  }
+}
 
-          canvas.width = img.width;
-          canvas.height = img.height;
-          ctx.drawImage(img, 0, 0);
+/**
+ * Smart Canvas Photo Cropper:
+ * Analyzes uploaded images or PDF pages to isolate the primary property photograph.
+ */
+async function cropListingPhotoFromUploadedFile(file: File): Promise<string> {
+  if (!file) return '';
 
-          let startY = 0;
-          let cropHeight = img.height;
-          let startX = 0;
-          let cropWidth = img.width;
+  let canvas: HTMLCanvasElement | null = null;
+  let imgWidth = 0;
+  let imgHeight = 0;
+  let originalDataUrl = '';
 
-          // 3. For tall vertical documents (flyers / MLS sheets / vertical phone screenshots):
-          if (img.height > img.width * 1.05) {
-            try {
-              const imgData = ctx.getImageData(0, 0, img.width, img.height);
-              const data = imgData.data;
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
-              const stepY = Math.max(2, Math.floor(img.height / 150));
-              const stepX = Math.max(2, Math.floor(img.width / 40));
-              const rowScores: { y: number; score: number }[] = [];
+  if (isPdf) {
+    const { pageCanvas } = await processPdfFile(file);
+    if (!pageCanvas) return '';
+    canvas = pageCanvas;
+    imgWidth = pageCanvas.width;
+    imgHeight = pageCanvas.height;
+    originalDataUrl = pageCanvas.toDataURL('image/jpeg', 0.85);
+  } else if (file.type.startsWith('image/')) {
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
 
-              for (let y = 0; y < Math.floor(img.height * 0.7); y += stepY) {
-                let varSum = 0;
-                for (let x = 0; x < img.width - stepX; x += stepX) {
-                  const idx1 = (y * img.width + x) * 4;
-                  const idx2 = (y * img.width + (x + stepX)) * 4;
+    if (!dataUrl) return '';
 
-                  const diff =
-                    Math.abs(data[idx1] - data[idx2]) +
-                    Math.abs(data[idx1 + 1] - data[idx2 + 1]) +
-                    Math.abs(data[idx1 + 2] - data[idx2 + 2]);
+    const img = await new Promise<HTMLImageElement | null>((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = dataUrl;
+    });
 
-                  const isLight =
-                    data[idx1] > 240 && data[idx1 + 1] > 240 && data[idx1 + 2] > 240;
-                  if (!isLight) {
-                    varSum += diff;
-                  }
-                }
-                rowScores.push({ y, score: varSum });
-              }
+    if (!img) return '';
 
-              // Find peak continuous color variance region (the photo)
-              let maxScore = 0;
-              let bestY = Math.round(img.height * 0.08); // fallback: top margin skip
+    canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0);
 
-              for (const item of rowScores) {
-                if (item.score > maxScore) {
-                  maxScore = item.score;
-                  bestY = item.y;
-                }
-              }
+    imgWidth = img.width;
+    imgHeight = img.height;
+    originalDataUrl = dataUrl;
+  }
 
-              // Target a 16:10 aspect ratio box around detected photo band
-              const targetH = Math.round(img.width * 0.62);
-              startY = Math.max(0, Math.min(bestY - Math.round(targetH * 0.15), img.height - targetH));
-              cropHeight = Math.min(targetH, img.height - startY);
+  if (!canvas || imgWidth === 0 || imgHeight === 0) return originalDataUrl;
 
-              // Trim document page side margins
-              startX = Math.round(img.width * 0.02);
-              cropWidth = Math.round(img.width * 0.96);
-            } catch (err) {
-              // Fallback for canvas security restrictions
-              startY = Math.round(img.height * 0.05);
-              cropHeight = Math.round(img.width * 0.65);
+  try {
+    const aspect = imgWidth / imgHeight;
+
+    // Direct landscape photo check
+    if (aspect >= 1.15 && aspect <= 2.2 && imgHeight <= 1250) {
+      return originalDataUrl;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return originalDataUrl;
+
+    let startY = 0;
+    let cropHeight = imgHeight;
+    let startX = 0;
+    let cropWidth = imgWidth;
+
+    if (imgHeight > imgWidth * 1.05) {
+      try {
+        const imgData = ctx.getImageData(0, 0, imgWidth, imgHeight);
+        const data = imgData.data;
+
+        const stepY = Math.max(2, Math.floor(imgHeight / 150));
+        const stepX = Math.max(2, Math.floor(imgWidth / 40));
+        const rowScores: { y: number; score: number }[] = [];
+
+        for (let y = 0; y < Math.floor(imgHeight * 0.7); y += stepY) {
+          let varSum = 0;
+          for (let x = 0; x < imgWidth - stepX; x += stepX) {
+            const idx1 = (y * imgWidth + x) * 4;
+            const idx2 = (y * imgWidth + (x + stepX)) * 4;
+
+            const diff =
+              Math.abs(data[idx1] - data[idx2]) +
+              Math.abs(data[idx1 + 1] - data[idx2 + 1]) +
+              Math.abs(data[idx1 + 2] - data[idx2 + 2]);
+
+            const isLight =
+              data[idx1] > 240 && data[idx1 + 1] > 240 && data[idx1 + 2] > 240;
+            if (!isLight) {
+              varSum += diff;
             }
           }
-
-          // 4. Render final cropped image
-          const cropCanvas = document.createElement('canvas');
-          const cropCtx = cropCanvas.getContext('2d');
-          if (!cropCtx) {
-            resolve(originalDataUrl);
-            return;
-          }
-
-          cropCanvas.width = cropWidth;
-          cropCanvas.height = cropHeight;
-
-          cropCtx.drawImage(
-            img,
-            startX, startY, cropWidth, cropHeight,
-            0, 0, cropWidth, cropHeight
-          );
-
-          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.90);
-          resolve(croppedDataUrl);
-        } catch (err) {
-          resolve(e.target?.result as string || '');
+          rowScores.push({ y, score: varSum });
         }
-      };
-      img.onerror = () => resolve('');
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => resolve('');
-    reader.readAsDataURL(file);
-  });
+
+        let maxScore = 0;
+        let bestY = Math.round(imgHeight * 0.08);
+
+        for (const item of rowScores) {
+          if (item.score > maxScore) {
+            maxScore = item.score;
+            bestY = item.y;
+          }
+        }
+
+        const targetH = Math.round(imgWidth * 0.62);
+        startY = Math.max(0, Math.min(bestY - Math.round(targetH * 0.15), imgHeight - targetH));
+        cropHeight = Math.min(targetH, imgHeight - startY);
+
+        startX = Math.round(imgWidth * 0.02);
+        cropWidth = Math.round(imgWidth * 0.96);
+      } catch (err) {
+        startY = Math.round(imgHeight * 0.05);
+        cropHeight = Math.round(imgWidth * 0.65);
+      }
+    }
+
+    const cropCanvas = document.createElement('canvas');
+    const cropCtx = cropCanvas.getContext('2d');
+    if (!cropCtx) return originalDataUrl;
+
+    cropCanvas.width = cropWidth;
+    cropCanvas.height = cropHeight;
+
+    cropCtx.drawImage(
+      canvas,
+      startX, startY, cropWidth, cropHeight,
+      0, 0, cropWidth, cropHeight
+    );
+
+    return cropCanvas.toDataURL('image/jpeg', 0.90);
+  } catch (err) {
+    return originalDataUrl;
+  }
 }
 
 /**
@@ -198,6 +243,26 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
   };
 
   const extractTextFromFile = async (uploadedFile: File): Promise<string> => {
+    const isPdf = uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf');
+
+    if (isPdf) {
+      const { text, pageCanvas } = await processPdfFile(uploadedFile);
+      if (text.trim().length > 50) {
+        return text;
+      }
+      if (pageCanvas) {
+        try {
+          const worker = await createWorker('eng');
+          const ret = await worker.recognize(pageCanvas);
+          await worker.terminate();
+          return ret.data.text || text;
+        } catch (e) {
+          return text;
+        }
+      }
+      return text;
+    }
+
     if (uploadedFile.type.startsWith('image/')) {
       try {
         const worker = await createWorker('eng');
@@ -223,18 +288,16 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setCurrentFileScanning(`Cropping photo & scanning ${i + 1}/${files.length}: ${file.name}`);
+        setCurrentFileScanning(`Processing PDF / Image ${i + 1}/${files.length}: ${file.name}`);
 
-        // 1. Crop main exterior property photo from the uploaded file
+        // 1. Crop main exterior property photo from the uploaded PDF or image file
         let croppedPhotoUrl = '';
-        if (file.type.startsWith('image/')) {
-          const croppedBase64 = await cropListingPhotoFromUploadedFile(file);
-          if (croppedBase64) {
-            croppedPhotoUrl = await uploadCroppedPhotoToR2(croppedBase64, file.name);
-          }
+        const croppedBase64 = await cropListingPhotoFromUploadedFile(file);
+        if (croppedBase64) {
+          croppedPhotoUrl = await uploadCroppedPhotoToR2(croppedBase64, file.name);
         }
 
-        // 2. Perform OCR text extraction
+        // 2. Perform PDF text / OCR extraction
         const ocrText = await extractTextFromFile(file);
 
         // 3. Send file & OCR payload to AI listing extraction API
@@ -334,10 +397,10 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>DeepSeek AI Listing Scanner</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[9px]">R2 Photo Storage (30d)</span>
+                <span>DeepSeek AI PDF & Image Listing Scanner</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[9px]">PDF & Images</span>
               </h3>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">Extracts specs, crops property photo, and saves to Cloudflare R2</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">Parses PDF documents, crops property photo, and uploads to Cloudflare R2</p>
             </div>
           </div>
 
@@ -369,8 +432,8 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                 <UploadCloud className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <p className="font-bold text-slate-900 dark:text-white">Upload Listing Flyers, MLS Sheets, or Agent PDFs</p>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Supports multi-file upload. Property photos are cropped & stored in Cloudflare R2 (30-day retention)</p>
+                <p className="font-bold text-slate-900 dark:text-white">Upload PDF Listing Sheets, Agent Flyers, or Image Screenshots</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">Supports PDF files & images. Property photos are cropped & stored in Cloudflare R2 (30-day retention)</p>
               </div>
 
               {/* Multiple Listings Checkbox & Description */}
@@ -384,11 +447,11 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                   />
                   <span className="flex items-center gap-1 text-purple-700 dark:text-purple-300">
                     <CheckSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                    Multiple Listings (1 property per image / file)
+                    Multiple Listings (1 property per PDF / file)
                   </span>
                 </label>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-6 leading-normal">
-                  Check this if each uploaded image or PDF is a separate property listing. If unchecked, all uploaded files/pages will be treated as belonging to a single multi-page property brochure.
+                  Check this if each uploaded PDF or image is a separate property listing. If unchecked, all uploaded files/pages will be treated as belonging to a single multi-page property brochure.
                 </p>
               </div>
 
@@ -396,7 +459,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                 type="file"
                 id="ai-listing-upload"
                 multiple
-                accept="image/*,.pdf"
+                accept="image/*,.pdf,application/pdf"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -406,7 +469,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs cursor-pointer transition-colors"
               >
                 <Plus className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span>Add Documents / Images</span>
+                <span>Add PDFs or Images</span>
               </label>
 
               {/* Uploaded Files Badge List */}
@@ -448,12 +511,12 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                     {isScanning ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-purple-200" />
-                        <span>{currentFileScanning || 'Scanning files...'}</span>
+                        <span>{currentFileScanning || 'Scanning PDF & images...'}</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>Analyze {files.length} Document{files.length > 1 ? 's' : ''} {isMultipleListings ? '(Multiple Listings Mode)' : ''}</span>
+                        <span>Analyze {files.length} PDF / Image{files.length > 1 ? 's' : ''} {isMultipleListings ? '(Multiple Listings Mode)' : ''}</span>
                       </>
                     )}
                   </button>
@@ -468,7 +531,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
               <div className="flex items-center justify-between">
                 <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-4 h-4" />
-                  Extracted {extractedResults.length} Property Listing{extractedResults.length > 1 ? 's' : ''} (Stored in Cloudflare R2):
+                  Extracted {extractedResults.length} Property Listing{extractedResults.length > 1 ? 's' : ''} from PDF / Images (Stored in Cloudflare R2):
                 </span>
                 <button
                   onClick={() => setExtractedResults([])}
