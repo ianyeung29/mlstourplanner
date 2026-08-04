@@ -11,70 +11,113 @@ interface AiUploadModalProps {
   onAddExtractedStops: (stops: Partial<TourStop>[]) => void;
 }
 
+interface PdfProcessResult {
+  text: string;
+  pageCanvas: HTMLCanvasElement | null;
+}
+
 /**
- * PDF Text & Page Canvas Processor:
- * Extracts digital text from PDF pages and renders Page 1 to an HTML5 Canvas for photo cropping & OCR.
+ * Ultra-Fast Fail-Safe PDF Text & Page Canvas Processor
+ * Protected by a 3-second Promise.race timeout to ensure browser never hangs.
  */
-async function processPdfFile(file: File): Promise<{ text: string; pageCanvas: HTMLCanvasElement | null }> {
-  try {
-    const pdfjsLib = await import('pdfjs-dist');
-    if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-    }
+async function processPdfFile(file: File): Promise<PdfProcessResult> {
+  const timeoutPromise = new Promise<PdfProcessResult>((resolve) => {
+    setTimeout(() => {
+      resolve({ text: '', pageCanvas: null });
+    }, 3000);
+  });
 
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-    let fullText = '';
-    for (let p = 1; p <= pdf.numPages; p++) {
-      const page = await pdf.getPage(p);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += `\n--- Page ${p} ---\n` + pageText;
-    }
-
-    let pageCanvas: HTMLCanvasElement | null = null;
-    if (pdf.numPages > 0) {
-      const page1 = await pdf.getPage(1);
-      const viewport = page1.getViewport({ scale: 1.5 });
-      pageCanvas = document.createElement('canvas');
-      pageCanvas.width = viewport.width;
-      pageCanvas.height = viewport.height;
-      const ctx = pageCanvas.getContext('2d');
-      if (ctx) {
-        await page1.render({ canvasContext: ctx, viewport }).promise;
+  const parsePromise = (async (): Promise<PdfProcessResult> => {
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      if (typeof window !== 'undefined') {
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        } catch (e) {}
       }
-    }
 
-    return { text: fullText, pageCanvas };
-  } catch (err) {
-    console.error('PDF parsing error:', err);
-    return { text: '', pageCanvas: null };
-  }
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        useSystemFonts: true,
+        isEvalSupported: false
+      });
+
+      const pdf = await loadingTask.promise;
+
+      let fullText = '';
+      const maxPagesToRead = Math.min(pdf.numPages, 5);
+      for (let p = 1; p <= maxPagesToRead; p++) {
+        try {
+          const page = await pdf.getPage(p);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map((item: any) => item.str || '').join(' ');
+          fullText += `\n--- Page ${p} ---\n` + pageText;
+        } catch (err) {}
+      }
+
+      let pageCanvas: HTMLCanvasElement | null = null;
+      if (pdf.numPages > 0) {
+        try {
+          const page1 = await pdf.getPage(1);
+          const viewport = page1.getViewport({ scale: 1.2 });
+          pageCanvas = document.createElement('canvas');
+          pageCanvas.width = viewport.width;
+          pageCanvas.height = viewport.height;
+          const ctx = pageCanvas.getContext('2d');
+          if (ctx) {
+            await page1.render({ canvasContext: ctx, viewport }).promise;
+          }
+        } catch (canvasErr) {}
+      }
+
+      // Fast fallback string extraction if pdfjs returned empty text
+      if (!fullText.trim()) {
+        try {
+          const decoder = new TextDecoder('utf-8');
+          const raw = decoder.decode(arrayBuffer);
+          const matches = raw.match(/\(([^()]+)\)\s*Tj/g) || raw.match(/\[(.*?)\]\s*TJ/g);
+          if (matches) {
+            fullText = matches.map(m => m.replace(/[\(\)\[\]]/g, '')).join(' ');
+          }
+        } catch (e) {}
+      }
+
+      return { text: fullText, pageCanvas };
+    } catch (err) {
+      console.error('PDF parsing error:', err);
+      return { text: '', pageCanvas: null };
+    }
+  })();
+
+  return Promise.race([parsePromise, timeoutPromise]);
 }
 
 /**
  * Smart Canvas Photo Cropper:
- * Analyzes uploaded images or PDF pages to isolate the primary property photograph.
+ * Isolates the primary property photograph from uploaded images or rendered PDF canvases.
  */
-async function cropListingPhotoFromUploadedFile(file: File): Promise<string> {
+async function cropListingPhotoFromCanvasOrFile(
+  file: File,
+  preRenderedCanvas: HTMLCanvasElement | null
+): Promise<string> {
   if (!file) return '';
 
-  let canvas: HTMLCanvasElement | null = null;
-  let imgWidth = 0;
-  let imgHeight = 0;
-  let originalDataUrl = '';
+  let canvas: HTMLCanvasElement | null = preRenderedCanvas;
+  let imgWidth = preRenderedCanvas ? preRenderedCanvas.width : 0;
+  let imgHeight = preRenderedCanvas ? preRenderedCanvas.height : 0;
+  let originalDataUrl = preRenderedCanvas ? preRenderedCanvas.toDataURL('image/jpeg', 0.85) : '';
 
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
-  if (isPdf) {
+  if (isPdf && !canvas) {
     const { pageCanvas } = await processPdfFile(file);
     if (!pageCanvas) return '';
     canvas = pageCanvas;
     imgWidth = pageCanvas.width;
     imgHeight = pageCanvas.height;
     originalDataUrl = pageCanvas.toDataURL('image/jpeg', 0.85);
-  } else if (file.type.startsWith('image/')) {
+  } else if (!isPdf && file.type.startsWith('image/')) {
     const dataUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target?.result as string || '');
@@ -110,7 +153,6 @@ async function cropListingPhotoFromUploadedFile(file: File): Promise<string> {
   try {
     const aspect = imgWidth / imgHeight;
 
-    // Direct landscape photo check
     if (aspect >= 1.15 && aspect <= 2.2 && imgHeight <= 1250) {
       return originalDataUrl;
     }
@@ -223,7 +265,6 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
   const [isScanning, setIsScanning] = React.useState(false);
   const [currentFileScanning, setCurrentFileScanning] = React.useState<string>('');
   const [extractedResults, setExtractedResults] = React.useState<any[]>([]);
-  const [croppedImages, setCroppedImages] = React.useState<Record<number, string>>({});
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -233,47 +274,12 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
       const selected = Array.from(e.target.files);
       setFiles(prev => [...prev, ...selected]);
       setExtractedResults([]);
-      setCroppedImages({});
       setErrorMsg(null);
     }
   };
 
   const handleRemoveFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const extractTextFromFile = async (uploadedFile: File): Promise<string> => {
-    const isPdf = uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf');
-
-    if (isPdf) {
-      const { text, pageCanvas } = await processPdfFile(uploadedFile);
-      if (text.trim().length > 50) {
-        return text;
-      }
-      if (pageCanvas) {
-        try {
-          const worker = await createWorker('eng');
-          const ret = await worker.recognize(pageCanvas);
-          await worker.terminate();
-          return ret.data.text || text;
-        } catch (e) {
-          return text;
-        }
-      }
-      return text;
-    }
-
-    if (uploadedFile.type.startsWith('image/')) {
-      try {
-        const worker = await createWorker('eng');
-        const ret = await worker.recognize(uploadedFile);
-        await worker.terminate();
-        return ret.data.text;
-      } catch (e) {
-        return '';
-      }
-    }
-    return '';
   };
 
   const handleAnalyze = async () => {
@@ -290,15 +296,42 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
         const file = files[i];
         setCurrentFileScanning(`Processing PDF / Image ${i + 1}/${files.length}: ${file.name}`);
 
-        // 1. Crop main exterior property photo from the uploaded PDF or image file
-        let croppedPhotoUrl = '';
-        const croppedBase64 = await cropListingPhotoFromUploadedFile(file);
-        if (croppedBase64) {
-          croppedPhotoUrl = await uploadCroppedPhotoToR2(croppedBase64, file.name);
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        let ocrText = '';
+        let pageCanvas: HTMLCanvasElement | null = null;
+
+        // 1. Single PDF processing pass
+        if (isPdf) {
+          const pdfRes = await processPdfFile(file);
+          ocrText = pdfRes.text;
+          pageCanvas = pdfRes.pageCanvas;
+
+          // If digital text is missing or short, perform quick OCR on canvas if available
+          if (ocrText.trim().length < 30 && pageCanvas) {
+            try {
+              const worker = await createWorker('eng');
+              const ret = await worker.recognize(pageCanvas);
+              await worker.terminate();
+              ocrText = ret.data.text || ocrText;
+            } catch (e) {}
+          }
+        } else if (file.type.startsWith('image/')) {
+          try {
+            const worker = await createWorker('eng');
+            const ret = await worker.recognize(file);
+            await worker.terminate();
+            ocrText = ret.data.text;
+          } catch (e) {}
         }
 
-        // 2. Perform PDF text / OCR extraction
-        const ocrText = await extractTextFromFile(file);
+        // 2. Crop main exterior property photo
+        let croppedPhotoUrl = '';
+        const croppedBase64 = await cropListingPhotoFromCanvasOrFile(file, pageCanvas);
+
+        // Upload to R2 in parallel without blocking AI response
+        const r2UploadPromise = croppedBase64
+          ? uploadCroppedPhotoToR2(croppedBase64, file.name)
+          : Promise.resolve('');
 
         // 3. Send file & OCR payload to AI listing extraction API
         const formData = new FormData();
@@ -306,28 +339,40 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
         if (ocrText) formData.append('ocrText', ocrText);
         formData.append('isMultiple', isMultipleListings ? 'true' : 'false');
 
-        const res = await fetch('/api/ai-extract-listing', {
-          method: 'POST',
-          body: formData
-        });
+        // Fetch with 20s timeout protection
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-        const data = await res.json();
-        const resultList = data.extracted || data.data;
+        try {
+          const res = await fetch('/api/ai-extract-listing', {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
 
-        if (res.ok && resultList) {
-          const rawItems = Array.isArray(resultList) ? resultList : [resultList];
+          const data = await res.json();
+          const resultList = data.extracted || data.data;
+          croppedPhotoUrl = await r2UploadPromise;
 
-          // 4. Attach cropped property photo to extracted listings
-          const enrichedItems = rawItems.map(item => ({
-            ...item,
-            image_url: (item.image_url && !item.image_url.includes('unsplash'))
-              ? item.image_url
-              : (croppedPhotoUrl || item.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80')
-          }));
+          if (res.ok && resultList) {
+            const rawItems = Array.isArray(resultList) ? resultList : [resultList];
 
-          allExtracted.push(...enrichedItems);
-        } else if (data.error) {
-          setErrorMsg(data.error);
+            const enrichedItems = rawItems.map(item => ({
+              ...item,
+              image_url: (item.image_url && !item.image_url.includes('unsplash'))
+                ? item.image_url
+                : (croppedPhotoUrl || item.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80')
+            }));
+
+            allExtracted.push(...enrichedItems);
+          } else if (data.error) {
+            setErrorMsg(data.error);
+          }
+        } catch (fetchErr: any) {
+          clearTimeout(timeoutId);
+          croppedPhotoUrl = await r2UploadPromise;
+          console.warn('API call timeout or error for file:', file.name, fetchErr);
         }
       }
 
@@ -372,7 +417,6 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
 
     setFiles([]);
     setExtractedResults([]);
-    setCroppedImages({});
     setErrorMsg(null);
 
     onClose();
@@ -381,7 +425,6 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
   const handleCloseModal = () => {
     setFiles([]);
     setExtractedResults([]);
-    setCroppedImages({});
     setErrorMsg(null);
     onClose();
   };
@@ -398,7 +441,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <span>DeepSeek AI PDF & Image Listing Scanner</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[9px]">PDF & Images</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[9px]">Fast PDF & Images</span>
               </h3>
               <p className="text-[11px] text-slate-600 dark:text-slate-400">Parses PDF documents, crops property photo, and uploads to Cloudflare R2</p>
             </div>
@@ -414,7 +457,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 text-xs bg-white dark:bg-slate-950">
-          {/* Service Unavailable Alert Banner */}
+          {/* Alert Banner */}
           {errorMsg && (
             <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-300 text-xs space-y-1 font-medium animate-fadeIn">
               <div className="font-bold flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-sm">
@@ -436,7 +479,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">Supports PDF files & images. Property photos are cropped & stored in Cloudflare R2 (30-day retention)</p>
               </div>
 
-              {/* Multiple Listings Checkbox & Description */}
+              {/* Multiple Listings Checkbox */}
               <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-500/30 text-left space-y-1">
                 <label className="flex items-center gap-2 font-bold text-slate-900 dark:text-white cursor-pointer text-xs">
                   <input
@@ -472,7 +515,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                 <span>Add PDFs or Images</span>
               </label>
 
-              {/* Uploaded Files Badge List */}
+              {/* Selected Files Badge List */}
               {files.length > 0 && (
                 <div className="pt-3 space-y-2 text-left">
                   <div className="text-slate-600 dark:text-slate-400 font-bold text-[11px] flex items-center justify-between">
@@ -545,7 +588,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                 {extractedResults.map((result, idx) => (
                   <div key={idx} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-500/30 space-y-3 shadow-sm">
                     <div className="flex items-start space-x-3">
-                      {/* Cropped Property Image Thumbnail stored in R2 */}
+                      {/* Cropped Property Image Thumbnail */}
                       <div className="relative w-28 h-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 border border-purple-300 dark:border-purple-500/40">
                         {result.image_url ? (
                           <img
