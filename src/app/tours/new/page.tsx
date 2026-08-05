@@ -284,8 +284,7 @@ function NewTourWizardContent() {
       updated_at: new Date().toISOString()
     };
 
-    const { updatedTour } = optimizeTourSchedule(draftTour, options);
-    const persisted = saveTour(updatedTour);
+    const persisted = saveTour(draftTour, options);
     setSavedTour(persisted);
     setStops(persisted.stops);
     setStage(2);

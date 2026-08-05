@@ -242,7 +242,7 @@ export function getTourById(id: string): Tour | undefined {
   return tours.find(t => t.id === id);
 }
 
-export function saveTour(tour: Tour): Tour {
+export function saveTour(tour: Tour, options?: { preserveOrder?: boolean }): Tour {
   const profile = getUserProfile();
 
   // Attach Creator Agent metadata if not already attached
@@ -254,7 +254,7 @@ export function saveTour(tour: Tour): Tour {
     agent_brokerage: tour.agent_brokerage || profile.brokerage_name || 'Side Luxury Real Estate'
   };
 
-  const { updatedTour } = optimizeTourSchedule(tourWithAgent);
+  const { updatedTour } = optimizeTourSchedule(tourWithAgent, options);
   const tours = getToursFromStorage();
   const index = tours.findIndex(t => t.id === updatedTour.id);
 

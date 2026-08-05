@@ -235,11 +235,10 @@ export default function TourWorkspacePage() {
     });
 
     const draft = { ...tour, stops: copy };
-    const { updatedTour, result } = optimizeTourSchedule(draft, { preserveOrder: true });
-    saveTour(updatedTour);
-    setTour(updatedTour);
-    setWarnings(result.warnings);
-    setInfeasibleReasons(result.infeasibleReasons || []);
+    const persisted = saveTour(draft, { preserveOrder: true });
+    setTour(persisted);
+    setWarnings([]);
+    setInfeasibleReasons([]);
   };
 
   const handleUpdateStopBuffers = (stopId: string, visitMins: number, travelBufferMins: number) => {
