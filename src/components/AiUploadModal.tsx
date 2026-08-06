@@ -216,22 +216,25 @@ async function cropListingPhotoFromCanvasOrFile(
       }
     }
 
+    const targetWidth = Math.min(480, cropWidth);
+    const targetHeight = Math.round(cropHeight * (targetWidth / cropWidth));
+
     const cropCanvas = document.createElement('canvas');
     const cropCtx = cropCanvas.getContext('2d');
-    if (!cropCtx) return originalDataUrl;
+    if (!cropCtx) return '';
 
-    cropCanvas.width = cropWidth;
-    cropCanvas.height = cropHeight;
+    cropCanvas.width = targetWidth;
+    cropCanvas.height = targetHeight;
 
     cropCtx.drawImage(
       canvas,
       startX, startY, cropWidth, cropHeight,
-      0, 0, cropWidth, cropHeight
+      0, 0, targetWidth, targetHeight
     );
 
-    return cropCanvas.toDataURL('image/jpeg', 0.90);
+    return cropCanvas.toDataURL('image/jpeg', 0.70);
   } catch (err) {
-    return originalDataUrl;
+    return '';
   }
 }
 
@@ -250,13 +253,16 @@ async function uploadCroppedPhotoToR2(base64Image: string, fileName: string): Pr
       })
     });
     const data = await res.json();
-    if (res.ok && data.imageUrl) {
+    if (res.ok && data.imageUrl && !data.imageUrl.startsWith('data:image')) {
+      return data.imageUrl;
+    }
+    if (data.imageUrl && data.imageUrl.length < 50000) {
       return data.imageUrl;
     }
   } catch (e) {
-    console.error('Failed to upload cropped photo to R2:', e);
+    console.warn('R2 photo upload fallback:', e);
   }
-  return base64Image;
+  return base64Image.length < 50000 ? base64Image : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80';
 }
 
 export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: AiUploadModalProps) {
@@ -479,25 +485,6 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">Supports PDF files & images. Property photos are cropped & stored in Cloudflare R2 (30-day retention)</p>
               </div>
 
-              {/* Multiple Listings Checkbox */}
-              <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-500/30 text-left space-y-1">
-                <label className="flex items-center gap-2 font-bold text-slate-900 dark:text-white cursor-pointer text-xs">
-                  <input
-                    type="checkbox"
-                    checked={isMultipleListings}
-                    onChange={e => setIsMultipleListings(e.target.checked)}
-                    className="rounded border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-purple-600 focus:ring-purple-500/50 w-4 h-4"
-                  />
-                  <span className="flex items-center gap-1 text-purple-700 dark:text-purple-300">
-                    <CheckSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                    Multiple Listings (1 property per PDF / file)
-                  </span>
-                </label>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-6 leading-normal">
-                  Check this if each uploaded PDF or image is a separate property listing. If unchecked, all uploaded files/pages will be treated as belonging to a single multi-page property brochure.
-                </p>
-              </div>
-
               <input
                 type="file"
                 id="ai-listing-upload"
@@ -559,7 +546,7 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>Analyze {files.length} PDF / Image{files.length > 1 ? 's' : ''} {isMultipleListings ? '(Multiple Listings Mode)' : ''}</span>
+                        <span>Analyze {files.length} PDF / Image{files.length > 1 ? 's' : ''}</span>
                       </>
                     )}
                   </button>

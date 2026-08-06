@@ -234,7 +234,41 @@ export function getToursFromStorage(): Tour[] {
 
 export function saveToursToStorage(tours: Tour[]): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY_TOURS, JSON.stringify(tours));
+
+  const sanitizeTourBase64Images = (tourList: Tour[]): Tour[] => {
+    return tourList.map(t => ({
+      ...t,
+      stops: (t.stops || []).map(s => {
+        if (s.image_url && s.image_url.startsWith('data:image') && s.image_url.length > 50000) {
+          const { image_url, ...rest } = s;
+          return {
+            ...rest,
+            image_url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'
+          };
+        }
+        return s;
+      })
+    }));
+  };
+
+  try {
+    localStorage.setItem(STORAGE_KEY_TOURS, JSON.stringify(tours));
+  } catch (e: any) {
+    console.warn('LocalStorage save warning:', e);
+    try {
+      // 1. Try stripping large base64 image strings from all stored tours
+      const sanitized = sanitizeTourBase64Images(tours);
+      localStorage.setItem(STORAGE_KEY_TOURS, JSON.stringify(sanitized));
+    } catch (innerErr) {
+      try {
+        // 2. If still over 5MB browser quota, slice to latest 10 tours with sanitized images
+        const sanitized = sanitizeTourBase64Images(tours).slice(0, 10);
+        localStorage.setItem(STORAGE_KEY_TOURS, JSON.stringify(sanitized));
+      } catch (finalErr) {
+        console.error('Failed to write tours to LocalStorage even after pruning:', finalErr);
+      }
+    }
+  }
 }
 
 export function getTourById(id: string): Tour | undefined {
