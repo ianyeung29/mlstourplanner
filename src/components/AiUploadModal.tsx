@@ -428,6 +428,28 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
     onClose();
   };
 
+  const handleLoadSample = () => {
+    setExtractedResults([
+      {
+        address: '78 Shelter Rock Rd, Manhasset, NY 11030',
+        mls_number: '3589412',
+        list_price: 1250000,
+        beds: 4,
+        baths: 3.5,
+        sqft: 3200,
+        image_url: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=600&q=80',
+        has_open_house: true,
+        open_house_start: '1:00 PM',
+        open_house_end: '3:00 PM',
+        listing_agent_name: 'Sarah Miller',
+        listing_agent_phone: '(516) 555-0199',
+        listing_agent_email: 'sarah.miller@realty.com',
+        listing_brokerage: 'Premier Realty Group',
+        agent_notes: 'Renovated 4-bedroom colonial with gourmet kitchen, heated pool, and close to LIRR.'
+      }
+    ]);
+  };
+
   const handleCloseModal = () => {
     setFiles([]);
     setExtractedResults([]);
@@ -476,82 +498,154 @@ export default function AiUploadModal({ isOpen, onClose, onAddExtractedStops }: 
 
           {/* File Drag & Drop Dropzone */}
           {extractedResults.length === 0 && (
-            <div className="border-2 border-dashed border-slate-300 dark:border-slate-800 hover:border-purple-500/50 rounded-2xl p-5 text-center space-y-4 bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-600/10 border border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center">
-                <UploadCloud className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-bold text-slate-900 dark:text-white">Upload PDF Listing Sheets, Agent Flyers, or Image Screenshots</p>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Supports PDF files & images. Property photos are cropped & stored in Cloudflare R2 (30-day retention)</p>
-              </div>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-slate-300 dark:border-slate-800 hover:border-purple-500/50 rounded-2xl p-5 text-center space-y-4 bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
+                <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-600/10 border border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center">
+                  <UploadCloud className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-bold text-slate-900 dark:text-white">Upload PDF Listing Sheets, Agent Flyers, or Image Screenshots</p>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">Supports PDF files & images. Property photos are cropped & stored in Cloudflare R2 (30-day retention)</p>
+                </div>
 
-              <input
-                type="file"
-                id="ai-listing-upload"
-                multiple
-                accept="image/*,.pdf,application/pdf"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+                <input
+                  type="file"
+                  id="ai-listing-upload"
+                  multiple
+                  accept="image/*,.pdf,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
 
-              <label
-                htmlFor="ai-listing-upload"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs cursor-pointer transition-colors"
-              >
-                <Plus className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span>Add PDFs or Images</span>
-              </label>
-
-              {/* Selected Files Badge List */}
-              {files.length > 0 && (
-                <div className="pt-3 space-y-2 text-left">
-                  <div className="text-slate-600 dark:text-slate-400 font-bold text-[11px] flex items-center justify-between">
-                    <span>Selected Files ({files.length}):</span>
-                    <button
-                      onClick={() => setFiles([])}
-                      className="text-rose-600 dark:text-rose-400 hover:underline text-[10px]"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                    {files.map((f, i) => (
-                      <div
-                        key={i}
-                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-2 text-slate-800 dark:text-slate-200 text-[11px]"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
-                        <span className="truncate max-w-[160px] font-medium">{f.name}</span>
-                        <button
-                          onClick={() => handleRemoveFile(i)}
-                          className="text-slate-400 hover:text-rose-600 ml-1"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  <label
+                    htmlFor="ai-listing-upload"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs cursor-pointer transition-all shadow"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add PDFs or Images</span>
+                  </label>
 
                   <button
-                    onClick={handleAnalyze}
-                    disabled={isScanning}
-                    className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 disabled:opacity-50 cursor-pointer"
+                    type="button"
+                    onClick={handleLoadSample}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-purple-700 dark:text-purple-300 font-bold text-xs cursor-pointer transition-colors border border-purple-300 dark:border-purple-500/30"
                   >
-                    {isScanning ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-purple-200" />
-                        <span>{currentFileScanning || 'Scanning PDF & images...'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        <span>Analyze {files.length} PDF / Image{files.length > 1 ? 's' : ''}</span>
-                      </>
-                    )}
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                    <span>⚡ Try Demo Sample Listing</span>
                   </button>
                 </div>
-              )}
+
+                {/* Selected Files Badge List */}
+                {files.length > 0 && (
+                  <div className="pt-3 space-y-2 text-left border-t border-slate-200 dark:border-slate-800">
+                    <div className="text-slate-600 dark:text-slate-400 font-bold text-[11px] flex items-center justify-between">
+                      <span>Selected Files ({files.length}):</span>
+                      <button
+                        onClick={() => setFiles([])}
+                        className="text-rose-600 dark:text-rose-400 hover:underline text-[10px]"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {files.map((f, i) => (
+                        <div
+                          key={i}
+                          className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-2 text-slate-800 dark:text-slate-200 text-[11px]"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
+                          <span className="truncate max-w-[160px] font-medium">{f.name}</span>
+                          <button
+                            onClick={() => handleRemoveFile(i)}
+                            className="text-slate-400 hover:text-rose-600 ml-1"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={isScanning}
+                      className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isScanning ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-purple-200" />
+                          <span>{currentFileScanning || 'Scanning PDF & images...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          <span>Analyze {files.length} PDF / Image{files.length > 1 ? 's' : ''}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Sample PDF / Flyer Format Guide Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+                    <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    Sample Listing Sheet / PDF Format Example
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold border border-purple-300 dark:border-purple-500/30">
+                    What your PDF or screenshot should look like
+                  </span>
+                </div>
+
+                {/* Sample Document Layout Card */}
+                <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-500/30 space-y-3 shadow-xs text-left relative overflow-hidden">
+                  <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-[9px] font-bold">
+                    SAMPLE PREVIEW
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-24 h-20 rounded-xl bg-slate-100 dark:bg-slate-800 relative overflow-hidden shrink-0 border border-purple-300 dark:border-purple-500/40 shadow-xs">
+                      <img
+                        src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=300&q=80"
+                        alt="Sample Listing Front Photo"
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-0.5 right-0.5 px-1 rounded bg-slate-900/80 text-white font-mono text-[7px] font-extrabold">
+                        PROPERTY PHOTO
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">MLS Sheet / Agent Flyer</div>
+                      <div className="font-extrabold text-slate-900 dark:text-white text-xs truncate">78 Shelter Rock Rd, Manhasset, NY 11030</div>
+                      <div className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs">$1,250,000</div>
+                    </div>
+                  </div>
+
+                  {/* Spec Grid */}
+                  <div className="grid grid-cols-3 gap-2 text-[10px] bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                    <div>MLS #: <strong className="text-slate-900 dark:text-white font-mono">#3589412</strong></div>
+                    <div>Beds / Baths: <strong className="text-slate-900 dark:text-white">4 Bed, 3.5 Bath</strong></div>
+                    <div>SqFt: <strong className="text-slate-900 dark:text-white">3,200 sqft</strong></div>
+                  </div>
+
+                  {/* Agent Info Card */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1 text-[11px] text-slate-700 dark:text-slate-300">
+                    <div className="text-[10px] uppercase tracking-wider text-purple-600 dark:text-purple-400 font-bold">Listing Agent Info (Extracted)</div>
+                    <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                      <span>Sarah Miller</span>
+                      <span className="text-slate-500 font-normal text-[10px]">Premier Realty Group</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                      <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /> (516) 555-0199</span>
+                      <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /> sarah.miller@realty.com</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
