@@ -67,25 +67,25 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans transition-colors duration-200">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Top Back Navigation */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
         </Link>
 
         {/* Page Header */}
-        <div className="border-b border-slate-800 pb-6 space-y-2">
-          <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-6 space-y-2">
+          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider">
             <MessageSquare className="w-4 h-4" />
             <span>24/7 Agent Support</span>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Contact Us</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Contact Us</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             Have questions about tour optimization, custom MLS integrations, or your PRO subscription? We are here to help!
           </p>
         </div>
@@ -93,47 +93,47 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* Left Column: Direct Info */}
           <div className="md:col-span-5 space-y-6">
-            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
-              <h2 className="text-sm font-bold text-white">Direct Support Channels</h2>
+            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Direct Support Channels</h2>
 
               <div className="space-y-4 text-xs">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
                     <Mail className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="text-white block">Email Support</strong>
-                    <a href="mailto:support@mlstourplanner.com" className="text-indigo-400 hover:underline">
+                    <strong className="text-slate-900 dark:text-white block">Email Support</strong>
+                    <a href="mailto:support@mlstourplanner.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                       support@mlstourplanner.com
                     </a>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0">
                     <Phone className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="text-white block">Agent Hotline</strong>
-                    <span className="text-slate-300">(516) 555-8820</span>
+                    <strong className="text-slate-900 dark:text-white block">Agent Hotline</strong>
+                    <span className="text-slate-700 dark:text-slate-300">(516) 555-8820</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-600/20 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/30 flex items-center justify-center shrink-0">
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="text-white block">Headquarters</strong>
-                    <span className="text-slate-300">Long Island & New York Metro</span>
+                    <strong className="text-slate-900 dark:text-white block">Headquarters</strong>
+                    <span className="text-slate-700 dark:text-slate-300">Long Island & New York Metro</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 space-y-2 text-xs">
-              <strong className="text-indigo-300 font-bold block">⚡ Response Guarantee</strong>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
+            <div className="p-5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 space-y-2 text-xs">
+              <strong className="text-indigo-800 dark:text-indigo-300 font-bold block">⚡ Response Guarantee</strong>
+              <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
                 All agent support inquiries are answered within <strong>2 hours</strong> during standard market hours (8:00 AM – 8:00 PM EST).
               </p>
             </div>
@@ -141,69 +141,69 @@ export default function ContactPage() {
 
           {/* Right Column: Contact Form */}
           <div className="md:col-span-7">
-            <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 text-xs shadow-2xl">
-              <h2 className="text-sm font-bold text-white border-b border-slate-800 pb-2">Send Us a Message</h2>
+            <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-4 text-xs shadow-xl">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-2">Send Us a Message</h2>
 
               {sendSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>Thank you! Your message has been sent. We will respond shortly.</span>
                 </div>
               )}
 
               {sendError && (
-                <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <div className="p-3 rounded-xl bg-rose-100 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                   <span>{sendError}</span>
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-300">Your Full Name *</label>
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Your Full Name *</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="e.g. Jane Doe"
-                    className="w-full bg-slate-950 text-white text-xs px-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-300">Your Email Address *</label>
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Your Email Address *</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="e.g. jane@realty.com"
-                    className="w-full bg-slate-950 text-white text-xs px-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Subject / Topic</label>
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Subject / Topic</label>
                 <input
                   type="text"
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
                   placeholder="e.g. Custom MLS Integration Question"
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Your Message *</label>
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Your Message *</label>
                 <textarea
                   required
                   rows={5}
                   value={message}
                   onChange={e => setMessage(e.target.value)}
                   placeholder="How can we help optimize your showing tours?"
-                  className="w-full bg-slate-950 text-white text-xs px-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none"
+                  className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-indigo-500 resize-none"
                 />
               </div>
 
@@ -220,12 +220,12 @@ export default function ContactPage() {
         </div>
 
         {/* Footer Navigation */}
-        <div className="pt-6 border-t border-slate-800 flex justify-between text-xs text-slate-400">
+        <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs text-slate-600 dark:text-slate-400">
           <span>© 2026 MLSTourPlanner. All Rights Reserved.</span>
-          <div className="space-x-4">
-            <Link href="/terms" className="hover:text-white">Terms</Link>
-            <Link href="/privacy" className="hover:text-white">Privacy</Link>
-            <Link href="/about" className="hover:text-white">About</Link>
+          <div className="space-x-4 font-bold">
+            <Link href="/terms" className="hover:text-indigo-600 dark:hover:text-white">Terms</Link>
+            <Link href="/privacy" className="hover:text-indigo-600 dark:hover:text-white">Privacy</Link>
+            <Link href="/about" className="hover:text-indigo-600 dark:hover:text-white">About</Link>
           </div>
         </div>
       </div>

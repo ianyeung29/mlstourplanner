@@ -81,19 +81,41 @@ function runScheduleCalculation(tour: Tour): Tour {
 
   let currentDepartureMins = dayStartMins;
 
+  // Track physical location coordinates of start address or previous property
+  let lastLat = tour.start_latitude || 40.7865;
+  let lastLng = tour.start_longitude || -73.7285;
+
   const scheduledStops: TourStop[] = tour.stops.map((stop, index) => {
     let driveMins = 0;
     let distMeters = 0;
+    let stopLat = stop.latitude;
+    let stopLng = stop.longitude;
 
-    if (index > 0) {
-      const prevStop = tour.stops[index - 1];
-      distMeters = calculateHaversineDistanceMeters(
-        prevStop.latitude,
-        prevStop.longitude,
-        stop.latitude,
-        stop.longitude
-      );
-      driveMins = Math.max(3, Math.ceil(distMeters / 670));
+    if (stop.is_break) {
+      // Break stops inherit previous property location (location pause)
+      if (index > 0) {
+        const prevPhysical = tour.stops.slice(0, index).reverse().find(s => !s.is_break) || tour.stops[index - 1];
+        stopLat = prevPhysical.latitude;
+        stopLng = prevPhysical.longitude;
+      } else {
+        stopLat = lastLat;
+        stopLng = lastLng;
+      }
+      driveMins = 0;
+      distMeters = 0;
+    } else {
+      if (index > 0) {
+        distMeters = calculateHaversineDistanceMeters(
+          lastLat,
+          lastLng,
+          stopLat,
+          stopLng
+        );
+        driveMins = Math.max(3, Math.ceil(distMeters / 670));
+      }
+      // Update last physical property location for subsequent drive calculations
+      lastLat = stopLat;
+      lastLng = stopLng;
     }
 
     const bufferMins = typeof stop.travel_buffer_minutes === 'number'
@@ -115,17 +137,20 @@ function runScheduleCalculation(tour: Tour): Tour {
     const visitMins = stop.visit_minutes || tour.default_visit_minutes || 25;
     const departureMins = arrivalMins + accessBeforeMins + visitMins + accessAfterMins;
 
-    currentDepartureMins = departureMins + bufferMins;
+    const appliedBuffer = stop.is_break ? 0 : bufferMins;
+    currentDepartureMins = departureMins + appliedBuffer;
 
     return {
       ...stop,
+      latitude: stopLat,
+      longitude: stopLng,
       planned_order: index + 1,
       planned_arrival: minutesToFormattedTime(arrivalMins),
       planned_departure: minutesToFormattedTime(departureMins),
       visit_minutes: visitMins,
-      travel_buffer_minutes: bufferMins,
-      drive_minutes_from_prev: index === 0 ? 0 : driveMins,
-      drive_miles_from_prev: index === 0 ? 0 : Math.round((distMeters / 1609.34) * 10) / 10
+      travel_buffer_minutes: appliedBuffer,
+      drive_minutes_from_prev: (index === 0 || stop.is_break) ? 0 : driveMins,
+      drive_miles_from_prev: (index === 0 || stop.is_break) ? 0 : Math.round((distMeters / 1609.34) * 10) / 10
     };
   });
 

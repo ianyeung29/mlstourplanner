@@ -40,21 +40,22 @@ export default function MapView({
   const [isSheetExpanded, setIsSheetExpanded] = useState(true);
 
   const stops = tour.stops;
+  const propertyStops = stops.filter(s => !s.is_break);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
 
-  const origin = stops.length > 0 ? encodeURIComponent(stops[0].normalized_address) : '';
-  const destination = stops.length > 1 ? encodeURIComponent(stops[stops.length - 1].normalized_address) : origin;
-  const waypoints = stops.length > 2
-    ? stops.slice(1, stops.length - 1).map(s => encodeURIComponent(s.normalized_address)).join('|')
+  const origin = propertyStops.length > 0 ? encodeURIComponent(propertyStops[0].normalized_address) : '';
+  const destination = propertyStops.length > 1 ? encodeURIComponent(propertyStops[propertyStops.length - 1].normalized_address) : origin;
+  const waypoints = propertyStops.length > 2
+    ? propertyStops.slice(1, propertyStops.length - 1).map(s => encodeURIComponent(s.normalized_address)).join('|')
     : '';
 
   const googleMapEmbedUrl = apiKey && !apiKey.includes('your_google_maps_key')
     ? `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&mode=driving`
-    : `https://maps.google.com/maps?saddr=${origin}&daddr=${stops.length > 1 ? stops.slice(1).map(s => encodeURIComponent(s.normalized_address)).join('+to:') : origin}&output=embed`;
+    : `https://maps.google.com/maps?saddr=${origin}&daddr=${propertyStops.length > 1 ? propertyStops.slice(1).map(s => encodeURIComponent(s.normalized_address)).join('+to:') : origin}&output=embed`;
 
   const externalDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=driving`;
 
-  const activePinStop = stops.find(s => s.id === (selectedStopId || hoveredStopId)) || (stops.length > 0 ? stops[0] : null);
+  const activePinStop = tour.stops.find(s => s.id === (selectedStopId || hoveredStopId)) || (propertyStops.length > 0 ? propertyStops[0] : null);
 
   const formatPrice = (price?: number) => {
     if (!price) return null;
@@ -72,7 +73,7 @@ export default function MapView({
               <span>Google Maps Route Navigation</span>
               <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[9px]">Live Sync</span>
             </h4>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">{stops.length} Property Showing Stops</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">{propertyStops.length} Property Showing Stops</p>
           </div>
         </div>
 

@@ -126,10 +126,13 @@ export default function GoogleInteractiveMap({
 
     if (!stops || stops.length === 0) return;
 
+    const propertyStops = stops.filter(s => !s.is_break);
+    if (propertyStops.length === 0) return;
+
     const pathCoords: any[] = [];
     const bounds = new google.maps.LatLngBounds();
 
-    stops.forEach((stop, index) => {
+    propertyStops.forEach((stop, index) => {
       const orderNum = index + 1;
       const pos = { lat: stop.latitude, lng: stop.longitude };
       pathCoords.push(pos);
@@ -179,7 +182,7 @@ export default function GoogleInteractiveMap({
     });
 
     // Draw Turn-by-Turn Driving Directions via DirectionsService
-    if (stops.length > 1) {
+    if (propertyStops.length > 1) {
       const directionsService = new google.maps.DirectionsService();
       const directionsRenderer = new google.maps.DirectionsRenderer({
         map,
@@ -193,9 +196,9 @@ export default function GoogleInteractiveMap({
 
       directionsRendererRef.current = directionsRenderer;
 
-      const origin = { lat: stops[0].latitude, lng: stops[0].longitude };
-      const destination = { lat: stops[stops.length - 1].latitude, lng: stops[stops.length - 1].longitude };
-      const waypoints = stops.slice(1, stops.length - 1).map(s => ({
+      const origin = { lat: propertyStops[0].latitude, lng: propertyStops[0].longitude };
+      const destination = { lat: propertyStops[propertyStops.length - 1].latitude, lng: propertyStops[propertyStops.length - 1].longitude };
+      const waypoints = propertyStops.slice(1, propertyStops.length - 1).map(s => ({
         location: { lat: s.latitude, lng: s.longitude },
         stopover: true
       }));

@@ -129,7 +129,7 @@ export default function TimelineView({
     return (
       <React.Fragment key={stop.id}>
         {/* Inter-Stop Drive Time Connector Badge */}
-        {idx > 0 && (
+        {idx > 0 && driveMins > 0 && !stop.is_break && (
           <div className="flex items-center justify-center py-1">
             <div className="px-3.5 py-1 rounded-full bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-500/50 text-indigo-700 dark:text-indigo-300 font-extrabold text-[11px] flex items-center gap-1.5 shadow-md animate-fadeIn">
               <Car className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
@@ -166,7 +166,7 @@ export default function TimelineView({
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-800 dark:text-amber-400 font-medium truncate">
-                    Location: {stop.normalized_address || 'Scheduled Rest Stop'}
+                    Location: {(!stop.normalized_address || stop.normalized_address === 'Lunch / Rest Stop') ? 'Previous Showing Location (Location Pause)' : stop.normalized_address}
                   </p>
                 </div>
               </div>

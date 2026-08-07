@@ -73,7 +73,7 @@ export default function Header() {
     router.push('/');
   };
 
-  const showWorkspaceNav = isLoggedIn && !isPublicRoute;
+  const showWorkspaceNav = isLoggedIn;
 
   return (
     <>

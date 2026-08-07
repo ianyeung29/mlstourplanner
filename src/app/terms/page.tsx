@@ -6,35 +6,35 @@ import { ShieldCheck, FileText, ArrowLeft, AlertCircle, Scale, Lock, CheckCircle
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans transition-colors duration-200">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Top Back Navigation */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
         </Link>
 
         {/* Page Header */}
-        <div className="border-b border-slate-800 pb-6 space-y-2">
-          <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-6 space-y-2">
+          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider">
             <Scale className="w-4 h-4" />
             <span>Legal Agreement</span>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Terms of Service</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Terms of Service</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             Last Updated: July 25, 2026 · Effective Immediately for All Users & Real Estate Agents
           </p>
         </div>
 
         {/* Terms Content Body */}
-        <div className="space-y-8 text-xs text-slate-300 leading-relaxed">
+        <div className="space-y-8 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
           {/* Section 1 */}
-          <section className="space-y-3 bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-500/30">1</span>
+          <section className="space-y-3 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30">1</span>
               Acceptance of Terms
             </h2>
             <p>
@@ -43,9 +43,9 @@ export default function TermsPage() {
           </section>
 
           {/* Section 2 */}
-          <section className="space-y-3 bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-500/30">2</span>
+          <section className="space-y-3 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30">2</span>
               Service Description & Real Estate License Use
             </h2>
             <p>
@@ -57,26 +57,26 @@ export default function TermsPage() {
           </section>
 
           {/* Section 3 */}
-          <section className="space-y-3 bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-500/30">3</span>
+          <section className="space-y-3 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30">3</span>
               MLS Data & Route Accuracy Disclaimer
             </h2>
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 space-y-1">
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 space-y-1">
               <div className="font-bold flex items-center gap-1.5 text-xs">
-                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span>Important Route & Timing Disclaimer</span>
               </div>
-              <p className="text-[11px] text-amber-200/90 leading-normal">
+              <p className="text-[11px] text-amber-800 dark:text-amber-200/90 leading-normal">
                 Estimated driving durations, matrix mileage, open house times, and showing appointment windows are generated based on mathematical heuristics and external GIS mappings. Real-world traffic conditions, weather delays, listing status changes, or unannounced lockbox updates may alter actual arrival times. Agents remain solely responsible for verifying appointment access with listing agents.
               </p>
             </div>
           </section>
 
           {/* Section 4 */}
-          <section className="space-y-3 bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-500/30">4</span>
+          <section className="space-y-3 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30">4</span>
               Subscriptions, Billing & Promotional Pricing
             </h2>
             <p>
@@ -88,9 +88,9 @@ export default function TermsPage() {
           </section>
 
           {/* Section 5 */}
-          <section className="space-y-3 bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-500/30">5</span>
+          <section className="space-y-3 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30">5</span>
               Limitation of Liability
             </h2>
             <p>
@@ -99,9 +99,9 @@ export default function TermsPage() {
           </section>
 
           {/* Section 6 */}
-          <section className="space-y-3 bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-500/30">6</span>
+          <section className="space-y-3 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30">6</span>
               Modifications to Service & Terms
             </h2>
             <p>
@@ -111,9 +111,9 @@ export default function TermsPage() {
         </div>
 
         {/* Footer Link */}
-        <div className="pt-6 border-t border-slate-800 flex justify-between text-xs text-slate-400">
+        <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs text-slate-600 dark:text-slate-400">
           <span>© 2026 MLSTourPlanner. All Rights Reserved.</span>
-          <Link href="/privacy" className="text-indigo-400 hover:underline">View Privacy Policy →</Link>
+          <Link href="/privacy" className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold">View Privacy Policy →</Link>
         </div>
       </div>
     </div>
