@@ -20,7 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   History,
-  Archive
+  Archive,
+  X
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -94,21 +95,29 @@ export default function DashboardPage() {
   // Search & Filter Logic
   const searchedTours = tours.filter(t => {
     // Tab Filter
-    if (filter === 'ACTIVE' && (t.status === 'COMPLETED')) return false;
+    if (filter === 'ACTIVE' && t.status === 'COMPLETED') return false;
     if (filter === 'CONFIRMED' && t.status !== 'CONFIRMED' && t.status !== 'PARTIALLY_CONFIRMED') return false;
     if (filter === 'COMPLETED' && t.status !== 'COMPLETED') return false;
 
-    // Search Query (Tour name, client name/email, notes, or property address/MLS)
+    // Search Query (Tour name, date, client name/email, notes, or property address/MLS)
     if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const nameMatch = t.name.toLowerCase().includes(q);
+    const q = searchQuery.trim().toLowerCase();
+    const nameMatch = (t.name || '').toLowerCase().includes(q);
+    const dateMatch = (t.tour_date || '').toLowerCase().includes(q);
     const clientMatch = (t.client_display_name || '').toLowerCase().includes(q) || (t.client_email || '').toLowerCase().includes(q);
     const notesMatch = (t.notes || '').toLowerCase().includes(q);
-    const stopsMatch = t.stops.some(s =>
-      s.normalized_address.toLowerCase().includes(q) ||
-      (s.mls_number || '').toLowerCase().includes(q)
+    const stopsMatch = (t.stops || []).some(s =>
+      (s.normalized_address || '').toLowerCase().includes(q) ||
+      (s.mls_number || '').toLowerCase().includes(q) ||
+      (s.agent_notes || '').toLowerCase().includes(q) ||
+      (s.client_notes || '').toLowerCase().includes(q) ||
+      (s.buyer_comments || '').toLowerCase().includes(q) ||
+      (s.break_title || '').toLowerCase().includes(q) ||
+      (s.listing_agent_name || '').toLowerCase().includes(q) ||
+      (s.listing_agent_email || '').toLowerCase().includes(q) ||
+      (s.listing_brokerage || '').toLowerCase().includes(q)
     );
-    return nameMatch || clientMatch || notesMatch || stopsMatch;
+    return nameMatch || dateMatch || clientMatch || notesMatch || stopsMatch;
   });
 
   const activeTours = searchedTours.filter(t => t.status !== 'COMPLETED');
@@ -286,8 +295,18 @@ export default function DashboardPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search tours by name, client, address, or MLS #..."
-              className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs pl-9 pr-8 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-xs"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                title="Clear Search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -297,20 +316,31 @@ export default function DashboardPage() {
             <Calendar className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto" />
             <div className="text-sm font-bold text-slate-900 dark:text-white">No matching tours found</div>
             <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
-              {searchQuery ? `No tours match "${searchQuery}". Try clearing your search.` : 'Click "+ New Tour" to build your first showing itinerary.'}
+              {searchQuery ? `No tours match "${searchQuery}".` : 'Click "+ New Tour" to build your first showing itinerary.'}
             </p>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-500 transition-colors shadow cursor-pointer"
+              >
+                Clear Search Filter
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
             {/* Active Tours Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                <span>Active Showing Tours ({activeTours.length})</span>
+            {activeTours.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  <span>Active Showing Tours ({activeTours.length})</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeTours.map(renderTourCard)}
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeTours.map(renderTourCard)}
-              </div>
-            </div>
+            )}
 
             {/* Foldable Completed / Archive Section */}
             {completedTours.length > 0 && (
@@ -318,16 +348,21 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsHistoryFolded(!isHistoryFolded)}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <History className="w-4 h-4 text-slate-500" />
                     <span>Completed & Archived Showing Tours ({completedTours.length})</span>
+                    {searchQuery.trim() && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold">
+                        Search Matches Auto-Expanded
+                      </span>
+                    )}
                   </div>
-                  {isHistoryFolded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                  {(isHistoryFolded && !searchQuery.trim()) ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
                 </button>
 
-                {!isHistoryFolded && (
+                {(!isHistoryFolded || !!searchQuery.trim() || filter === 'COMPLETED') && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
                     {completedTours.map(renderTourCard)}
                   </div>
